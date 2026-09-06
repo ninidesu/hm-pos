@@ -3,7 +3,6 @@ import {
   CreditCard,
   Expand,
   Landmark,
-  LogOut,
   Minus,
   Pencil,
   Plus,
@@ -506,6 +505,7 @@ export default function CashierPage() {
   const total = Math.max(0, priceBreakdown.totalAmount)
   const change = payment.method === 'Cash' ? Math.max(0, Number(payment.cashReceived || 0) - total) : 0
   const cashierName = cashierProfile?.full_name || cashierProfile?.username || cashierProfile?.email || 'Cashier'
+  const cashierUsername = cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier'
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
   const cashierStatus = !isSupabaseConfigured
     ? { label: 'Setup required', detail: 'Connect Supabase', tone: 'warning' }
@@ -748,7 +748,7 @@ export default function CashierPage() {
       <header className="legacy-cashier-top">
         <div className="cashier-top-left">
           <span className="cashier-brand-mark" aria-hidden="true">HM</span>
-          <div><span className="cashier-kicker">Walk-in point of sale</span><strong>{receiptStore.name}</strong></div>
+          <div><span className="cashier-kicker">HM POS</span><strong className="cashier-welcome-name">Welcome Cashier, {cashierUsername}!</strong></div>
           <span
             className={`cashier-connection-status is-${cashierStatus.tone}`}
             role="status"
@@ -775,7 +775,7 @@ export default function CashierPage() {
             {showTransactions ? <ShoppingBag size={21} /> : <ReceiptText size={21} />}
             <span>{showTransactions ? 'Back to POS' : 'Transactions'}</span>
           </button>
-          <button type="button" onClick={() => setLogoutOpen(true)}><LogOut size={21} /><span>Sign out</span></button>
+          <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)}>Sign out</button>
         </nav>
       </header>
 

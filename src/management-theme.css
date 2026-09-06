@@ -1215,3 +1215,15 @@ html[data-staff-motion="reduce"] .app-layout.legacy-admin .cancel-animated-path,
 @media(max-width:1250px) and (min-width:901px){.ad-dashboard-v2 .ad-dashboard-analytics-row--overview .ad-transactions-table tbody tr:nth-child(4){display:none}}
 @media(max-width:900px){.ad-dashboard-v2 .ad-dashboard-analytics-row--overview{grid-template-columns:1fr}.ad-dashboard-v2 .ad-dashboard-analytics-row--overview .ad-transactions-table{min-width:780px}.ad-dashboard-v2 .ad-dashboard-analytics-row--overview .ad-transactions-table :is(th,td):nth-child(3),.ad-dashboard-v2 .ad-dashboard-analytics-row--overview .ad-transactions-table :is(th,td):nth-child(4){display:table-cell}}
 @media(max-width:720px){.ad-dashboard-v2 .ad-dashboard-secondary-grid{grid-template-columns:1fr}}
+/* Requested admin table refinements. */
+.app-layout.legacy-admin .transaction-row-actions .is-view {
+  width: auto;
+  min-width: 48px;
+  padding: 0 11px;
+  color: var(--mgmt-primary);
+  font-weight: 800;
+}
+
+.app-layout.legacy-admin :is(.stock-table, .stock-table thead, .stock-table tbody, .stock-table tr, .stock-table th, .stock-table td) {
+  background: #fff;
+}

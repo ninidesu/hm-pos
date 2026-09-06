@@ -559,6 +559,116 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
   box-shadow: inset 0 0 0 1px #e1d5e9;
 }
 
+/* Shared sign-out dialog for both the admin and cashier workspaces. */
+.auth-confirm-backdrop {
+  padding: 20px;
+  background: rgba(28, 24, 31, .64);
+  backdrop-filter: blur(4px);
+}
+
+.auth-confirm-modal {
+  width: min(360px, calc(100vw - 32px));
+  padding: 34px 18px 18px;
+  border: 1px solid #e2d7e9;
+  border-radius: 22px;
+  background: #fff !important;
+  color: #180c22;
+  text-align: center;
+  box-shadow: 0 26px 70px rgba(25, 10, 34, .3);
+  overflow: visible;
+}
+
+.auth-confirm-close {
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: #f7f3f9;
+  color: #24142f;
+  box-shadow: none;
+}
+
+.auth-confirm-close:hover:not(:disabled) {
+  background: #eee4f3;
+  color: #542475;
+}
+
+.auth-confirm-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f2eaf7;
+  color: #6b2e91;
+  box-shadow: none;
+}
+
+.auth-confirm-modal h2 {
+  margin: 0 auto 8px;
+  color: #180c22 !important;
+  font-family: inherit;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+
+.auth-confirm-modal p {
+  max-width: 250px;
+  margin: 0 auto;
+  color: #716278 !important;
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
+.auth-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.auth-confirm-actions .secondary-button,
+.auth-confirm-actions .primary-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 9px;
+  font-size: .82rem;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.auth-confirm-actions .secondary-button {
+  border: 1px solid #cdbbdd;
+  background: #fff;
+  color: #542475;
+}
+
+.auth-confirm-actions .primary-button {
+  border: 1px solid #67268f;
+  background: linear-gradient(135deg, #7433a0, #5a207d) !important;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(90, 32, 125, .22);
+}
+
+.auth-confirm-actions :is(.secondary-button, .primary-button):focus-visible,
+.auth-confirm-close:focus-visible {
+  outline: 3px solid rgba(132, 82, 163, .38);
+  outline-offset: 2px;
+}
+
+@media (max-width: 420px) {
+  .auth-confirm-modal { padding: 32px 16px 16px; }
+  .auth-confirm-actions { grid-template-columns: 1fr; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .app-layout:is(.legacy-admin, .legacy-staff) *,
   .cashier-v2 * {
@@ -1192,6 +1302,98 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
 }
 
 .app-layout.legacy-admin .ua-stat-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Simple receipt-detail treatment in Transaction History. */
+.app-layout.legacy-admin .txn-receipt-drawer {
+  width: min(460px, 100vw);
+  border-left: 1px solid #decfe7;
+  background: #faf7fc !important;
+}
+.app-layout.legacy-admin .txn-receipt-drawer > header {
+  padding: 22px 24px;
+  border-bottom-color: #dfd1e8;
+  background: linear-gradient(135deg, #fff 40%, #f4ecf8);
+}
+.app-layout.legacy-admin .txn-receipt-drawer > header .settings-kicker {
+  color: #6b368f;
+  letter-spacing: .12em;
+}
+.app-layout.legacy-admin .txn-receipt-drawer > header h2 {
+  margin-top: 6px;
+  color: #2d0a4e;
+  font-size: 1.55rem;
+  letter-spacing: -.02em;
+}
+.app-layout.legacy-admin .txn-receipt-drawer > header button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #e3d8e9;
+  background: #fff;
+  color: #3f145f;
+  cursor: pointer;
+}
+.app-layout.legacy-admin .txn-receipt-drawer > header button:hover {
+  border-color: #c9a9dc;
+  background: #f0e8f6;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body {
+  gap: 14px;
+  padding: 18px;
+  background: #faf7fc;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body > section {
+  padding: 18px;
+  border: 1px solid #e5dbea;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 5px 16px rgba(45, 10, 78, .04);
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body section h3 {
+  margin-bottom: 11px;
+  color: #542475;
+  font-size: .72rem;
+  letter-spacing: .1em;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body section p {
+  min-height: 24px;
+  margin: 2px 0;
+  color: #594b61;
+  line-height: 1.5;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body section:nth-child(2) p {
+  justify-content: space-between;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px dashed #e7ddeb;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body section:nth-child(2) p:last-child {
+  border-bottom: 0;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body section p b {
+  margin-left: auto;
+  color: #2d0a4e;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body section:last-child {
+  border-color: #d6c2e2;
+  background: #fcf9fd;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .form-error {
+  min-height: 44px !important;
+  margin-top: 12px !important;
+  padding: 11px 12px !important;
+  border: 1px solid #efcaca;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: #8c3030 !important;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-footer {
+  padding: 14px 18px;
+  border-top-color: #dfd1e8;
+  background: #fff;
+}
+
 @media (max-width: 760px) {
   .app-layout.legacy-admin .ua-stat-rail { grid-template-columns: 1fr; }
   .app-layout.legacy-admin .ua-stat-rail > div { border-right: 0; border-bottom: 1px solid var(--mgmt-border); }

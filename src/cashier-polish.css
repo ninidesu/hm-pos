@@ -7806,3 +7806,89 @@ html[data-theme] .cashier-v2 .cashier-brand-mark img {
 @media (prefers-reduced-motion: reduce) {
   .cashier-v2 .cashier-product-stock { transition: none; }
 }
+/* Cashier header copy and simplified sign-out action. */
+.cashier-v2 .cashier-welcome-name {
+  display: block;
+  max-width: min(34vw, 360px);
+  overflow: hidden;
+  color: #2d0a4e;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-signout-button {
+  min-width: 84px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #542475;
+  border-radius: 10px;
+  background: #fff;
+  color: #542475;
+  font-size: .76rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-signout-button:hover {
+  border-color: #2d0a4e;
+  background: #f0e8f6;
+  color: #2d0a4e;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-signout-button:focus-visible {
+  outline: 3px solid rgba(84, 36, 117, .24);
+  outline-offset: 2px;
+}
+
+@media (max-width: 680px) {
+  .cashier-v2 .cashier-welcome-name { max-width: 42vw; }
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-signout-button {
+    min-width: 72px;
+    padding: 0 12px;
+  }
+}
+/* Transaction history and order-detail surfaces stay white in every theme. */
+html[data-theme] .cashier-v2 :is(
+  .cashier-transactions-panel,
+  .cashier-transactions-view,
+  .cashier-transactions-view > header,
+  .cashier-transactions-view .transaction-toolbar,
+  .cashier-transactions-view .transaction-list-heading,
+  .cashier-transactions-view .cashier-transactions-list,
+  .cashier-transactions-view .cashier-transactions-list article,
+  .cashier-transactions-view .transaction-pagination,
+  .cashier-transaction-detail-panel,
+  .cashier-transaction-placeholder-header,
+  .cashier-transaction-empty-state,
+  .cashier-transaction-details-view,
+  .cashier-transaction-details-view > header,
+  .cashier-transaction-details-view .transaction-details-body,
+  .cashier-transaction-details-view .detail-meta > div,
+  .cashier-transaction-details-view .detail-items article,
+  .cashier-transaction-details-view .detail-summary,
+  .cashier-transaction-details-view .detail-summary > div
+) {
+  background: #fff !important;
+}
+
+html[data-theme] .cashier-v2 :is(
+  .cashier-transactions-panel,
+  .cashier-transaction-detail-panel,
+  .cashier-transactions-view > header,
+  .cashier-transactions-view .transaction-toolbar,
+  .cashier-transactions-view .transaction-list-heading,
+  .cashier-transactions-view .cashier-transactions-list article,
+  .cashier-transactions-view .transaction-pagination,
+  .cashier-transaction-placeholder-header,
+  .cashier-transaction-details-view > header,
+  .cashier-transaction-details-view .detail-meta > div,
+  .cashier-transaction-details-view .detail-items article,
+  .cashier-transaction-details-view .detail-summary
+) {
+  border-color: #dfd1e8 !important;
+}
+
+html[data-theme] .cashier-v2 .cashier-transactions-view .cashier-transactions-list article:hover,
+html[data-theme] .cashier-v2 .cashier-transactions-view .cashier-transactions-list article.is-selected {
+  background: #f8f3fb !important;
+}

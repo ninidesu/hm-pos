@@ -1,4 +1,4 @@
-import { Coffee, LogOut, X } from 'lucide-react'
+import { LogOut, X } from 'lucide-react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useEffect, useRef } from 'react'
 
@@ -60,23 +60,12 @@ export default function LogoutConfirmModal({ open, busy = false, onCancel, onCon
             >
               <X size={20} />
             </button>
-            <div className="auth-confirm-scene" aria-hidden="true">
-              <div className="auth-confirm-scene__halo" />
-              <div className="auth-confirm-scene__leaf auth-confirm-scene__leaf--left" />
-              <div className="auth-confirm-scene__leaf auth-confirm-scene__leaf--right" />
-              <span className="auth-confirm-icon">
-                <LogOut size={40} />
-              </span>
-              <div className="auth-confirm-cup">
-                <Coffee size={26} />
-                <span className="auth-confirm-brand-mark">HM</span>
-              </div>
-            </div>
-            <span className="payment-modal-kicker auth-confirm-kicker">Account session</span>
-            <h2 id="logout-confirm-title">Are you sure you want to log out?</h2>
-            <span className="auth-confirm-divider" aria-hidden="true">❦</span>
+            <span className="auth-confirm-icon" aria-hidden="true">
+              <LogOut size={30} strokeWidth={2} />
+            </span>
+            <h2 id="logout-confirm-title">Sign out?</h2>
             <p id="logout-confirm-copy">
-              You will be signed out of your current session and returned to the login screen.
+              You will be signed out and returned to the login screen.
             </p>
             <div className="payment-modal-actions auth-confirm-actions">
               <button
@@ -86,20 +75,11 @@ export default function LogoutConfirmModal({ open, busy = false, onCancel, onCon
                 onClick={onCancel}
                 disabled={busy}
               >
-                <X size={16} />
                 Cancel
               </button>
               <button className="primary-button" type="button" onClick={onConfirm} disabled={busy}>
-                <LogOut size={17} />
-                {busy ? 'Logging out...' : 'Log Out'}
+                {busy ? 'Signing out...' : 'Sign Out'}
               </button>
-            </div>
-            <div className="auth-confirm-landscape" aria-hidden="true">
-              <span className="auth-confirm-landscape__ridge auth-confirm-landscape__ridge--back" />
-              <span className="auth-confirm-landscape__ridge auth-confirm-landscape__ridge--front" />
-              <span className="auth-confirm-landscape__mark">
-                <span className="auth-confirm-brand-mark">HM</span>
-              </span>
             </div>
           </motion.section>
         </motion.div>
