@@ -3,7 +3,6 @@ import {
   Coffee, PackageCheck, PackageX, ReceiptText, RefreshCw,
   ShoppingBag, Store, TrendingDown, TrendingUp, WalletCards,
 } from 'lucide-react'
-import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -31,47 +30,6 @@ const adminPageTitles = {
 
 const paymentLabels = { gcash: 'GCash', bank_transfer: 'Bank transfer', cod: 'Cash / COD', cash: 'Cash', other: 'Other' }
 const defaultSalesRangeDays = 14
-const numberCountDuration = 3
-const kpiGraphDuration = 4
-const salesGraphDuration = kpiGraphDuration
-const microContainerVariants = {
-  hidden: {},
-  visible: {
-    transition: {
-      delayChildren: 0.04,
-      staggerChildren: 0.045,
-    },
-  },
-}
-const microItemVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
-  },
-}
-const transactionRowsVariants = {
-  hidden: {},
-  visible: { transition: { delayChildren: 0.12, staggerChildren: 0.055 } },
-}
-const transactionRowVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.28, ease: 'easeOut' } },
-}
-const sparkAreaVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: kpiGraphDuration * 0.8, delay: 0.15 } },
-}
-const sparkLineVariants = {
-  hidden: { pathLength: 0, opacity: 0 },
-  visible: { pathLength: 1, opacity: 1, transition: { duration: kpiGraphDuration, ease: [0.16, 1, 0.3, 1] } },
-}
-const sparkDotVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.35, delay: kpiGraphDuration - 0.35 } },
-}
-const MotionLink = motion(Link)
 
 function formatCount(value) {
   return Math.round(value).toLocaleString('en-PH')
@@ -112,13 +70,6 @@ function chartAxisStep(value) {
   const normalized = (value / 4) / magnitude
   const factor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10
   return factor * magnitude
-}
-
-function chartEaseTimelinePosition(progress) {
-  const easedProgress = Math.min(1, Math.max(0, progress))
-  const parameter = 1 - Math.cbrt(1 - easedProgress)
-  const inverse = 1 - parameter
-  return 3 * inverse ** 2 * parameter * 0.16 + 3 * inverse * parameter ** 2 * 0.3 + parameter ** 3
 }
 
 function smoothSparklineGeometry(points, x, y) {
@@ -241,13 +192,13 @@ function DashboardContent({ metrics }) {
           <span className="ad-welcome-kicker">Store operations</span>
           <h2 id="welcome-heading">Welcome back, Admin!</h2>
         </div>
-        <motion.nav className="ad-quick-nav" aria-label="Dashboard shortcuts" variants={microContainerVariants}>
-          {quickLinks.map(({ label, detail, icon: Icon, to }) => <MotionLink to={to} key={label} variants={microItemVariants}>
+        <nav className="ad-quick-nav" aria-label="Dashboard shortcuts">
+          {quickLinks.map(({ label, detail, icon: Icon, to }) => <Link to={to} key={label}>
             <span className="ad-quick-icon" aria-hidden="true"><Icon size={19} /></span>
             <span className="ad-quick-copy"><b>{label}</b><small>{detail}</small></span>
             <ArrowRight size={13} aria-hidden="true" />
-          </MotionLink>)}
-        </motion.nav>
+          </Link>)}
+        </nav>
       </div>
     </section>
 
@@ -276,10 +227,10 @@ function DashboardContent({ metrics }) {
 
 function LowStockAlerts({ items }) {
   return <Panel title="Low-stock alerts" detail="Inventory below its alert level" action={<Link to="/admin/inventory">View all <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-low-stock-panel">
-    <motion.div className="ad-low-stock-list" variants={microContainerVariants}>{items.slice(0, 3).map((item) => {
+    <div className="ad-low-stock-list">{items.slice(0, 3).map((item) => {
       const out = item.quantity <= 0
-      return <MotionLink to="/admin/inventory" key={item.id} variants={microItemVariants}><span className={out ? 'is-out' : ''}><PackageX size={16} /></span><div><b>{item.name}</b><small>{item.quantity} {item.unit} left</small></div><em className={out ? 'is-out' : ''}>{out ? 'Out' : 'Low'}</em></MotionLink>
-    })}{!items.length && <EmptyState icon={PackageCheck} text="Inventory levels are healthy." />}</motion.div>
+      return <Link to="/admin/inventory" key={item.id}><span className={out ? 'is-out' : ''}><PackageX size={16} /></span><div><b>{item.name}</b><small>{item.quantity} {item.unit} left</small></div><em className={out ? 'is-out' : ''}>{out ? 'Out' : 'Low'}</em></Link>
+    })}{!items.length && <EmptyState icon={PackageCheck} text="Inventory levels are healthy." />}</div>
   </Panel>
 }
 
@@ -288,11 +239,11 @@ function RecentTransactions({ orders }) {
     <div className="ad-transactions-scroll">
       <table className="ad-transactions-table">
         <thead><tr><th>Transaction</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Time</th><th><span className="sr-only">Actions</span></th></tr></thead>
-        <motion.tbody variants={transactionRowsVariants}>{orders.slice(0, 4).map((order) => {
+        <tbody>{orders.slice(0, 4).map((order) => {
           const items = order.order_items || []
           const itemLabel = items.length ? items.slice(0, 2).map((item) => item.display_name || item.item_name).join(', ') : 'No item details'
           const statusSlug = order.is_voided ? 'voided' : order.status.toLowerCase().replaceAll(' ', '-')
-          return <motion.tr key={order.id} variants={transactionRowVariants}>
+          return <tr key={order.id}>
             <td><b>{order.order_number}</b><small>Walk-in</small></td>
             <td><span title={items.map((item) => item.display_name || item.item_name).join(', ')}>{itemLabel}{items.length > 2 ? ` +${items.length - 2}` : ''}</span></td>
             <td>{paymentLabels[order.payments?.[0]?.method] || 'Not recorded'}</td>
@@ -300,8 +251,8 @@ function RecentTransactions({ orders }) {
             <td><span className={`ad-order-status is-${statusSlug}`}>{order.is_voided ? 'Voided' : order.status}</span></td>
             <td><time dateTime={order.created_at}>{formatTime(order.created_at)}</time></td>
             <td><Link to="/admin/transactions" aria-label={`View transaction ${order.order_number}`}>View <ArrowRight size={14} /></Link></td>
-          </motion.tr>
-        })}</motion.tbody>
+          </tr>
+        })}</tbody>
       </table>
       {!orders.length && <EmptyState icon={ReceiptText} text="No recent transactions are available." />}
     </div>
@@ -314,24 +265,12 @@ function Panel({ title, detail, action, className = '', children }) {
 
 function KpiCard({ icon: Icon, label, value, valueFormat = formatCount, comparison, detail, tone, trend, trendLabel }) {
   const up = comparison >= 0
-  return <article className={`ad-kpi-card is-${tone}`}><div className="ad-kpi-top"><span><Icon size={19} /></span><small>{label}</small></div><strong><AnimatedMetric value={value} format={valueFormat} duration={numberCountDuration} /></strong><footer>{comparison !== undefined && <span className={up ? 'is-up' : 'is-down'}>{up ? <TrendingUp size={14} /> : <TrendingDown size={14} />}{percentage(comparison)}</span>}<small>{detail}</small></footer>{trend?.length > 1 && <MiniTrend values={trend.map((point) => point.total)} tone={tone} label={trendLabel || `${label} trend`} />}</article>
+  return <article className={`ad-kpi-card is-${tone}`}><div className="ad-kpi-top"><span><Icon size={19} /></span><small>{label}</small></div><strong><AnimatedMetric value={value} format={valueFormat} /></strong><footer>{comparison !== undefined && <span className={up ? 'is-up' : 'is-down'}>{up ? <TrendingUp size={14} /> : <TrendingDown size={14} />}{percentage(comparison)}</span>}<small>{detail}</small></footer>{trend?.length > 1 && <MiniTrend values={trend.map((point) => point.total)} tone={tone} label={trendLabel || `${label} trend`} />}</article>
 }
 
-function AnimatedMetric({ value, format = formatCount, duration = 0.7 }) {
+function AnimatedMetric({ value, format = formatCount }) {
   const target = Number.isFinite(Number(value)) ? Number(value) : 0
-  const reducedMotion = useReducedMotion()
-  const motionValue = useMotionValue(0)
-  const displayValue = useTransform(motionValue, (latest) => format(latest))
-
-  useEffect(() => {
-    const controls = animate(motionValue, target, {
-      duration: reducedMotion ? 0 : duration,
-      ease: [0.16, 1, 0.3, 1],
-    })
-    return () => controls.stop()
-  }, [duration, motionValue, reducedMotion, target])
-
-  return <motion.span>{displayValue}</motion.span>
+  return <span>{format(target)}</span>
 }
 
 function MiniTrend({ values = [], tone, label }) {
@@ -349,14 +288,13 @@ function MiniTrend({ values = [], tone, label }) {
   const gradientId = `ad-spark-${tone}-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   return <svg className={`ad-kpi-sparkline is-${tone}`} viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label} preserveAspectRatio="none">
     <defs><linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity=".25" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient></defs>
-    <motion.path className="ad-kpi-spark-area" d={area} fill={`url(#${gradientId})`} variants={sparkAreaVariants} />
-    <motion.path className="ad-kpi-spark-line" d={line} vectorEffect="non-scaling-stroke" variants={sparkLineVariants} />
-    <motion.circle className="ad-kpi-spark-dot" cx={x(points.length - 1)} cy={y(points[points.length - 1])} r="3.5" variants={sparkDotVariants} />
+    <path className="ad-kpi-spark-area" d={area} fill={`url(#${gradientId})`} />
+    <path className="ad-kpi-spark-line" d={line} vectorEffect="non-scaling-stroke" />
+    <circle className="ad-kpi-spark-dot" cx={x(points.length - 1)} cy={y(points[points.length - 1])} r="3.5" />
   </svg>
 }
 
 function SalesLineChart({ points, comparison }) {
-  const reducedMotion = useReducedMotion()
   const [range, setRange] = useState(defaultSalesRangeDays)
   const visiblePoints = points.slice(-range)
   const [activeIndex, setActiveIndex] = useState(null)
@@ -372,16 +310,15 @@ function SalesLineChart({ points, comparison }) {
   const area = `${line} L ${x(visiblePoints.length - 1)} ${height - inset.bottom} L ${x(0)} ${height - inset.bottom} Z`
   const active = visiblePoints[activeIndex ?? visiblePoints.length - 1]
   const total = visiblePoints.reduce((sum, point) => sum + point.total, 0)
-  return <motion.div className="ad-sales-chart" variants={microContainerVariants}>
-    <div className="ad-chart-summary"><span><b><AnimatedMetric value={total} format={money} duration={numberCountDuration} /></b><small>{range}-day net sales <em className={comparison >= 0 ? 'is-up' : 'is-down'}>{comparison >= 0 ? '+' : '-'}{percentage(comparison)} today</em></small></span>{active && <span><motion.b key={active.day} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.18 }}>{money(active.total)}</motion.b><small>{formatShortDate(active.day)}</small></span>}<label><span>Period</span><select value={range} onChange={(event) => setRange(Number(event.target.value))}><option value="7">Last 7 days</option><option value="14">Last 14 days</option></select></label></div>
+  return <div className="ad-sales-chart">
+    <div className="ad-chart-summary"><span><b><AnimatedMetric value={total} format={money} /></b><small>{range}-day net sales <em className={comparison >= 0 ? 'is-up' : 'is-down'}>{comparison >= 0 ? '+' : '-'}{percentage(comparison)} today</em></small></span>{active && <span><b>{money(active.total)}</b><small>{formatShortDate(active.day)}</small></span>}<label><span>Period</span><select value={range} onChange={(event) => setRange(Number(event.target.value))}><option value="7">Last 7 days</option><option value="14">Last 14 days</option></select></label></div>
     <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${range}-day net sales line chart`} preserveAspectRatio="none">
       <defs>
         <linearGradient id="adSalesArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--mgmt-primary)" stopOpacity=".28" /><stop offset="1" stopColor="var(--mgmt-primary)" stopOpacity="0" /></linearGradient>
-        <clipPath id="adSalesRevealClip"><rect key={`clip-${range}-${visiblePoints.map((point) => point.total).join('-')}`} className="ad-sales-line-clip" x={inset.left - 6} y="0" width={width - inset.left - inset.right + 12} height={height} style={{ animationDuration: `${salesGraphDuration}s` }} /></clipPath>
       </defs>
       {[0, .25, .5, .75, 1].map((step) => <g key={step}><line x1={inset.left} x2={width - inset.right} y1={inset.top + step * plotHeight} y2={inset.top + step * plotHeight} className="ad-chart-gridline" /><text x="0" y={inset.top + step * plotHeight + 3} className="ad-chart-y-label">{chartAxisCurrency(axisMax * (1 - step))}</text></g>)}
-      <path d={area} fill="url(#adSalesArea)" clipPath="url(#adSalesRevealClip)" />
-      <path d={line} className="ad-sales-line" clipPath="url(#adSalesRevealClip)" vectorEffect="non-scaling-stroke" />
+      <path d={area} fill="url(#adSalesArea)" />
+      <path d={line} className="ad-sales-line" vectorEffect="non-scaling-stroke" />
       {visiblePoints.map((point, index) => {
         const pointX = x(index)
         const pointY = y(point.total)
@@ -392,23 +329,23 @@ function SalesLineChart({ points, comparison }) {
         const isActive = activeIndex === index
         return <g key={`${range}-${point.day}-${point.total}`} className={isActive ? 'is-active' : ''} onMouseEnter={() => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} onFocus={() => setActiveIndex(index)} onBlur={() => setActiveIndex(null)} tabIndex="0" aria-label={`${formatShortDate(point.day)}, ${money(point.total)}`}>
           <rect className="ad-chart-point-hit-area" x={Math.max(0, pointX - 24)} y="0" width="48" height={height} fill="transparent" />
-          <circle className="ad-sales-point" cx={pointX} cy={pointY} r={isActive ? 6 : 3.5} style={{ animationDelay: `${chartEaseTimelinePosition(index / Math.max(1, visiblePoints.length - 1)) * salesGraphDuration}s` }} />
-          {isActive && <motion.g className="ad-chart-point-tooltip" initial={{ opacity: 0, y: 3 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reducedMotion ? 0 : 0.18 }} aria-hidden="true">
+          <circle className="ad-sales-point" cx={pointX} cy={pointY} r={isActive ? 6 : 3.5} />
+          {isActive && <g className="ad-chart-point-tooltip" aria-hidden="true">
             <rect x={tooltipX} y={tooltipY} width={tooltipWidth} height={tooltipHeight} rx="7" />
             <text x={tooltipX + tooltipWidth / 2} y={tooltipY + 13} className="ad-chart-tooltip-value">{money(point.total)}</text>
             <text x={tooltipX + tooltipWidth / 2} y={tooltipY + 25} className="ad-chart-tooltip-date">{formatShortDate(point.day)}</text>
-          </motion.g>}
+          </g>}
         </g>
       })}
     </svg>
     <div className="ad-chart-axis" aria-label={`${range}-day date axis`}>{visiblePoints.map((point) => <span key={point.day}>{formatShortDate(point.day)}</span>)}</div>
-  </motion.div>
+  </div>
 }
 
 function RankedProducts({ products }) {
   const visibleProducts = products.slice(0, 3)
   const max = Math.max(1, ...visibleProducts.map((item) => item.qty))
-  return <motion.div className="ad-ranked-list" variants={microContainerVariants}>{visibleProducts.length ? visibleProducts.map((item, index) => <motion.div key={item.name} variants={microItemVariants}><span>{String(index + 1).padStart(2, '0')}</span><div><b>{item.name}</b><small>{item.qty} sold - {money(item.revenue)}</small><i><em style={{ width: `${(item.qty / max) * 100}%` }} /></i></div></motion.div>) : <EmptyState icon={Coffee} text="No completed product sales yet." />}</motion.div>
+  return <div className="ad-ranked-list">{visibleProducts.length ? visibleProducts.map((item, index) => <div key={item.name}><span>{String(index + 1).padStart(2, '0')}</span><div><b>{item.name}</b><small>{item.qty} sold - {money(item.revenue)}</small><i><em style={{ width: `${(item.qty / max) * 100}%` }} /></i></div></div>) : <EmptyState icon={Coffee} text="No completed product sales yet." />}</div>
 }
 
 function EmptyState({ icon: Icon, text }) {

@@ -1325,3 +1325,32 @@ html[data-staff-motion="reduce"] .app-layout.legacy-admin .cancel-animated-path,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Dashboard content is intentionally static to prevent animation state from hiding data. */
+.app-layout.legacy-admin .ad-dashboard-v2,
+.app-layout.legacy-admin .ad-dashboard-v2 *,
+.app-layout.legacy-admin .ad-dashboard-v2 *::before,
+.app-layout.legacy-admin .ad-dashboard-v2 *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 :is(
+  .ad-welcome-section,
+  .ad-dashboard-content,
+  .ad-reference-kpis,
+  .ad-dashboard-content-row,
+  .ad-panel,
+  .ad-panel-body,
+  .ad-low-stock-list,
+  .ad-ranked-list,
+  .ad-transactions-scroll,
+  .ad-sales-chart
+) {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-sales-point {
+  opacity: 1 !important;
+}
