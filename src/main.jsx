@@ -1,0 +1,12 @@
+﻿import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import App from './App'
+import { AuthProvider } from './context/AuthContext'
+import { PricingProvider } from './context/PricingContext'
+import './styles.css'
+import './management-theme.css'
+import './cashier-polish.css'
+import './pricing.css'
+import './hm-theme.css'
+createRoot(document.getElementById('root')).render(<StrictMode><BrowserRouter><PricingProvider><AuthProvider><App /></AuthProvider></PricingProvider></BrowserRouter></StrictMode>)

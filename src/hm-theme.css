@@ -1,0 +1,654 @@
+/* HM POS — unified deep-purple and white system theme.
+   Loaded last so legacy admin and cashier palettes resolve to one brand system. */
+
+:root {
+  --hm-purple-950: #210034;
+  --hm-purple-900: #2d0a4e;
+  --hm-purple-800: #3f145f;
+  --hm-purple-700: #542475;
+  --hm-purple-600: #6b368f;
+  --hm-purple-500: #8452a3;
+  --hm-purple-300: #c9a9dc;
+  --hm-purple-100: #f0e8f6;
+  --hm-purple-50: #f8f5fb;
+  --hm-white: #ffffff;
+  --hm-ink: #26152f;
+  --hm-muted: #716278;
+  --hm-line: #e1d5e9;
+  --hm-success: #237a52;
+  --hm-warning: #a56512;
+  --hm-danger: #b43d52;
+}
+
+/* Management workspace */
+.app-layout.legacy-admin,
+.app-layout.legacy-staff {
+  --mgmt-canvas: #f8f5fb;
+  --mgmt-subtle: #f2ecf7;
+  --mgmt-surface: #ffffff;
+  --mgmt-elevated: #ffffff;
+  --mgmt-featured: #f5eff9;
+  --mgmt-hover: #ece3f3;
+  --mgmt-border: #e1d5e9;
+  --mgmt-border-strong: #c9b5d6;
+  --mgmt-text: #291933;
+  --mgmt-heading: #1f0d29;
+  --mgmt-muted: #716278;
+  --mgmt-muted-low: #7f7086;
+  --mgmt-faint: #8d7f94;
+  --mgmt-primary: #542475;
+  --mgmt-primary-strong: #3f145f;
+  --mgmt-on-primary: #ffffff;
+  --mgmt-danger: #b43d52;
+  --mgmt-danger-soft: #fff1f4;
+  --mgmt-success: #237a52;
+  --mgmt-success-soft: #edf8f3;
+  --mgmt-warning: #a56512;
+  --mgmt-warning-soft: #fff7e8;
+  --mgmt-input: #fcfaff;
+  --mgmt-shadow: 0 14px 34px rgba(45, 10, 78, .08);
+  --mgmt-shadow-high: 0 26px 64px rgba(33, 0, 52, .16);
+  --mgmt-highlight: rgba(255, 255, 255, .94);
+  color: var(--mgmt-text);
+  background: var(--mgmt-canvas);
+}
+
+.app-layout.legacy-admin[data-theme='dark'],
+.app-layout.legacy-staff[data-theme='dark'] {
+  --mgmt-canvas: #160c1f;
+  --mgmt-subtle: #1c0f27;
+  --mgmt-surface: #21112e;
+  --mgmt-elevated: #2a1638;
+  --mgmt-featured: #251332;
+  --mgmt-hover: #352044;
+  --mgmt-border: #493156;
+  --mgmt-border-strong: #684979;
+  --mgmt-text: #f7f2fa;
+  --mgmt-heading: #ffffff;
+  --mgmt-muted: #c5b8ce;
+  --mgmt-muted-low: #aa99b5;
+  --mgmt-faint: #9e8ba9;
+  --mgmt-primary: #c39adb;
+  --mgmt-primary-strong: #d8b7e8;
+  --mgmt-on-primary: #210034;
+  --mgmt-danger: #ff8293;
+  --mgmt-danger-soft: #391923;
+  --mgmt-success: #62c99a;
+  --mgmt-success-soft: #153126;
+  --mgmt-warning: #efb95f;
+  --mgmt-warning-soft: #382a15;
+  --mgmt-input: #1b0e25;
+  --mgmt-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+  --mgmt-shadow-high: 0 26px 68px rgba(0, 0, 0, .42);
+  --mgmt-highlight: rgba(216, 183, 232, .06);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-main {
+  background: var(--mgmt-canvas);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-sidebar,
+.app-layout:is(.legacy-admin, .legacy-staff)[data-theme='dark'] .internal-sidebar {
+  background:
+    radial-gradient(circle at 8% 4%, rgba(255, 255, 255, .10), transparent 16rem),
+    linear-gradient(180deg, #3f145f 0%, #2d0a4e 55%, #210034 100%);
+  border-color: rgba(255, 255, 255, .11);
+  box-shadow: 12px 0 34px rgba(33, 0, 52, .16);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-sidebar::after {
+  background: radial-gradient(circle, rgba(201, 169, 220, .18), transparent 70%);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-brand h2 { color: #fff; }
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-brand p,
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-group-label { color: rgba(255, 255, 255, .62); }
+
+.app-layout.legacy-admin .internal-brand h2 {
+  font-size: 1.55rem;
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.app-layout.legacy-admin .internal-sidebar nav a {
+  gap: 0;
+  padding-inline: 18px;
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-brand-mark {
+  border-color: rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .12);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-sidebar nav a,
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-sidebar .sidebar-exit {
+  color: rgba(255, 255, 255, .78);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-sidebar nav a:hover,
+.app-layout:is(.legacy-admin, .legacy-staff) .internal-sidebar nav a.active,
+.app-layout:is(.legacy-admin, .legacy-staff)[data-theme='dark'] .internal-sidebar nav a:hover,
+.app-layout:is(.legacy-admin, .legacy-staff)[data-theme='dark'] .internal-sidebar nav a.active {
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+  box-shadow: inset 3px 0 0 #d8b7e8;
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .sidebar-theme-switcher {
+  border-color: rgba(255, 255, 255, .18);
+  background: rgba(19, 0, 31, .24);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) .sidebar-theme-switcher button { color: rgba(255, 255, 255, .7); }
+.app-layout:is(.legacy-admin, .legacy-staff) .sidebar-theme-switcher button.active {
+  background: rgba(255, 255, 255, .94);
+  color: #3f145f;
+  box-shadow: 0 5px 14px rgba(18, 0, 30, .22);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) :is(input, select, textarea, button, a):focus-visible {
+  outline-color: var(--mgmt-primary);
+}
+
+.app-layout:is(.legacy-admin, .legacy-staff) :is(.ad-panel, .ad-kpi-card, .ac-editor-section, .ua-panel, .cancel-panel, .ir-panel) {
+  box-shadow: var(--mgmt-shadow);
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple,
+.app-layout.legacy-admin[data-theme='dark'] .ad-dashboard-v2 .ad-kpi-card.is-purple {
+  border-color: #542475;
+  background: linear-gradient(145deg, #542475 0%, #3f145f 58%, #2d0a4e 100%);
+  color: #fff;
+  box-shadow: 0 14px 32px rgba(45, 10, 78, .24);
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple::before {
+  background: #d8b7e8;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple .ad-kpi-top > span {
+  background: rgba(255, 255, 255, .14);
+  color: #fff;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple .ad-kpi-top small,
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple > strong,
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple > footer,
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple > footer small {
+  color: #fff;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple > footer .is-up {
+  color: #9de2bf;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple > footer .is-down {
+  color: #ffb3bf;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple .ad-kpi-spark-line {
+  stroke: #fff;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple .ad-kpi-spark-dot {
+  fill: #fff;
+  stroke: #542475;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 .ad-kpi-card.is-purple .ad-kpi-spark-area {
+  color: #d8b7e8;
+}
+
+/* Manage Menu uses the HM POS purple palette throughout. */
+.app-layout.legacy-admin .menu-summary-card {
+  --stat-color: var(--mgmt-primary);
+  --stat-soft: #f0e8f6;
+  --stat-border: rgba(84, 36, 117, .18);
+  border-color: var(--stat-border);
+  background: var(--mgmt-surface);
+  box-shadow: 0 8px 22px rgba(45, 10, 78, .07), inset 0 1px 0 #fff;
+}
+
+.app-layout.legacy-admin .menu-summary-card.accent-purple {
+  --stat-color: #542475;
+  --stat-soft: #f0e8f6;
+  --stat-border: rgba(84, 36, 117, .2);
+}
+
+.app-layout.legacy-admin .menu-manage-tools,
+.app-layout.legacy-admin .menu-manage-toolbar {
+  border-color: var(--mgmt-border);
+  background: var(--mgmt-surface);
+  box-shadow: 0 7px 20px rgba(45, 10, 78, .06);
+}
+
+.app-layout.legacy-admin .menu-manage-search {
+  border-color: var(--mgmt-border);
+  background: var(--mgmt-input);
+  color: var(--mgmt-primary);
+}
+
+.app-layout.legacy-admin .menu-manage-search:focus-within {
+  border-color: var(--mgmt-primary);
+  box-shadow: 0 0 0 3px rgba(84, 36, 117, .14);
+}
+
+.app-layout.legacy-admin .menu-manage-search-clear {
+  background: var(--mgmt-subtle);
+  color: var(--mgmt-primary);
+}
+
+.app-layout.legacy-admin .menu-manage-search-clear:hover {
+  background: var(--mgmt-hover);
+  color: var(--mgmt-primary-strong);
+}
+
+.app-layout.legacy-admin .menu-manage-chip:hover {
+  border-color: color-mix(in srgb, var(--mgmt-primary) 35%, var(--mgmt-border));
+  background: var(--mgmt-subtle);
+}
+
+.app-layout.legacy-admin .menu-manage-chip.active {
+  border-color: var(--mgmt-primary);
+  background: var(--mgmt-primary);
+  color: var(--mgmt-on-primary);
+  box-shadow: 0 5px 14px rgba(45, 10, 78, .2);
+}
+
+.app-layout.legacy-admin .menu-manage-chip:focus-visible,
+.app-layout.legacy-admin .menu-manage-search-clear:focus-visible,
+.app-layout.legacy-admin .menu-view-toggle button:focus-visible {
+  outline-color: var(--mgmt-primary);
+}
+
+.app-layout.legacy-admin .menu-card-price {
+  color: var(--mgmt-primary);
+}
+
+.app-layout.legacy-admin .inv-status.tone-purple {
+  border-color: #c9a9dc;
+  background: #f0e8f6;
+  color: #542475;
+}
+
+/* Cashier workspace */
+.cashier-v2 {
+  --ink: #291933;
+  --muted: #716278;
+  --line: #e1d5e9;
+  --canvas: #f2ecf7;
+  --panel: #ffffff;
+  --brand: #542475;
+  --brand-soft: #f0e8f6;
+  --accent: #6b368f;
+  --cashier-forest: #542475;
+  --cashier-forest-deep: #2d0a4e;
+  --cashier-secondary: #f8f5fb;
+  --cashier-surface: #ffffff;
+  --cashier-paper: #fcfaff;
+  --cashier-line: #e1d5e9;
+  --cashier-muted: #716278;
+  --cashier-gold: #6b368f;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(132, 82, 163, .11), transparent 28rem),
+    var(--canvas) !important;
+}
+
+html[data-theme='dark'] .cashier-v2 {
+  --ink: #f7f2fa;
+  --muted: #c5b8ce;
+  --line: #493156;
+  --canvas: #160c1f;
+  --panel: #21112e;
+  --brand: #c39adb;
+  --brand-soft: #352044;
+  --accent: #d8b7e8;
+  --cashier-forest: #f7f2fa;
+  --cashier-forest-deep: #160c1f;
+  --cashier-secondary: #1c0f27;
+  --cashier-surface: #21112e;
+  --cashier-paper: #1b0e25;
+  --cashier-line: #493156;
+  --cashier-muted: #c5b8ce;
+  --cashier-gold: #c39adb;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(195, 154, 219, .12), transparent 28rem),
+    var(--canvas) !important;
+}
+
+.cashier-v2 .legacy-cashier-top,
+html[data-theme='dark'] .cashier-v2 .legacy-cashier-top {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  box-shadow: 0 10px 30px rgba(45, 10, 78, .10) !important;
+}
+
+.cashier-v2 :is(.cashier-brand-mark, .cashier-order-icon) {
+  border-color: #d9c6e5 !important;
+  background: #f0e8f6 !important;
+  color: #542475 !important;
+}
+
+html[data-theme='dark'] .cashier-v2 :is(.cashier-brand-mark, .cashier-order-icon) {
+  border-color: #684979 !important;
+  background: #352044 !important;
+  color: #d8b7e8 !important;
+}
+
+.cashier-v2 :is(.legacy-pos-menu, .legacy-ticket, .cashier-panel, .cashier-transactions-panel, .cashier-transaction-detail-panel),
+html[data-theme='dark'] .cashier-v2 :is(.legacy-pos-menu, .legacy-ticket, .cashier-panel, .cashier-transactions-panel, .cashier-transaction-detail-panel) {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  box-shadow: 0 18px 46px rgba(45, 10, 78, .10) !important;
+}
+
+.cashier-v2 :is(.legacy-ticket > header, .cashier-workspace-tabs, .legacy-ticket-total, .cashier-checkout-block),
+html[data-theme='dark'] .cashier-v2 :is(.legacy-ticket > header, .cashier-workspace-tabs, .legacy-ticket-total, .cashier-checkout-block) {
+  border-color: var(--line) !important;
+  background: var(--brand-soft) !important;
+}
+
+.cashier-v2 :is(.cashier-menu-controls > label, .legacy-pos-tabs button, .cashier-fullscreen, .cashier-theme-toggle, .legacy-cashier-top nav button, .legacy-pos-products article, .cashier-customer, input, select, textarea),
+html[data-theme='dark'] .cashier-v2 :is(.cashier-menu-controls > label, .legacy-pos-tabs button, .cashier-fullscreen, .cashier-theme-toggle, .legacy-cashier-top nav button, .legacy-pos-products article, .cashier-customer, input, select, textarea) {
+  border-color: var(--line) !important;
+  background: var(--cashier-paper) !important;
+  color: var(--ink) !important;
+}
+
+.cashier-v2 :is(.legacy-pos-heading h1, .cashier-menu-title, .legacy-ticket h2, .cashier-line-top b, .cashier-product-body h3, .cashier-time b) {
+  color: var(--ink) !important;
+}
+
+.cashier-v2 :is(.legacy-pos-heading p, .cashier-product-body p, .cashier-line-body small, .cashier-sync-note, .cashier-time span) {
+  color: var(--muted) !important;
+}
+
+.cashier-v2 :is(.legacy-pos-tabs button.active, .cashier-workspace-tabs button.is-active, .cashier-order-tab.is-active, .cashier-payment-methods button.active, .checkout-choice-grid button.active, .cashier-option-grid button.active, .modern-pill-grid button.active, .transaction-pagination button.active),
+html[data-theme='dark'] .cashier-v2 :is(.legacy-pos-tabs button.active, .cashier-workspace-tabs button.is-active, .cashier-order-tab.is-active, .cashier-payment-methods button.active, .checkout-choice-grid button.active, .cashier-option-grid button.active, .modern-pill-grid button.active, .transaction-pagination button.active) {
+  border-color: var(--brand) !important;
+  background: var(--brand) !important;
+  color: #fff !important;
+}
+
+html[data-theme='dark'] .cashier-v2 :is(.legacy-pos-tabs button.active, .cashier-workspace-tabs button.is-active, .cashier-order-tab.is-active, .cashier-payment-methods button.active, .checkout-choice-grid button.active, .cashier-option-grid button.active, .modern-pill-grid button.active, .transaction-pagination button.active) {
+  color: #210034 !important;
+}
+
+.cashier-v2 :is(.legacy-pos-products article > button, .cashier-product-body footer button, .legacy-charge, .modern-add-cart, .customize-add-button, .checkout-actions button:last-child, .transaction-details-modal > footer button:last-child),
+html[data-theme='dark'] .cashier-v2 :is(.legacy-pos-products article > button, .cashier-product-body footer button, .legacy-charge, .modern-add-cart, .customize-add-button, .checkout-actions button:last-child, .transaction-details-modal > footer button:last-child) {
+  border-color: #542475 !important;
+  background: #542475 !important;
+  color: #fff !important;
+}
+
+.cashier-v2 :is(.cashier-menu-actions .cashier-new-order, .cashier-fullscreen:hover, .cashier-theme-toggle:hover, .cashier-theme-toggle[aria-pressed='true']) {
+  border-color: #c9a9dc !important;
+  background: #f0e8f6 !important;
+  color: #542475 !important;
+}
+
+html[data-theme='dark'] .cashier-v2 :is(.cashier-menu-actions .cashier-new-order, .cashier-fullscreen:hover, .cashier-theme-toggle:hover, .cashier-theme-toggle[aria-pressed='true']) {
+  border-color: #684979 !important;
+  background: #352044 !important;
+  color: #d8b7e8 !important;
+}
+
+.cashier-v2 :is(button, input, select, textarea, [role='button']):focus-visible {
+  outline: 3px solid rgba(107, 54, 143, .32) !important;
+  outline-offset: 2px;
+}
+
+.cashier-v2 :is(.cashier-custom-modal, .checkout-modal, .cashier-transactions-modal, .transaction-details-modal),
+html[data-theme='dark'] .cashier-v2 :is(.cashier-custom-modal, .checkout-modal, .cashier-transactions-modal, .transaction-details-modal) {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+  color: var(--ink) !important;
+  box-shadow: 0 30px 80px rgba(33, 0, 52, .24) !important;
+}
+
+.cashier-v2 .cashier-custom-modal > header,
+html[data-theme='dark'] .cashier-v2 .cashier-custom-modal > header {
+  background:
+    radial-gradient(circle at 85% 10%, rgba(216, 183, 232, .22), transparent 16rem),
+    linear-gradient(135deg, #542475, #2d0a4e) !important;
+  color: #fff !important;
+}
+
+.cashier-v2 :is(.cashier-custom-body, .modern-pos-modal-body, .checkout-modal-head, .checkout-actions),
+html[data-theme='dark'] .cashier-v2 :is(.cashier-custom-body, .modern-pos-modal-body, .checkout-modal-head, .checkout-actions) {
+  border-color: var(--line) !important;
+  background: var(--panel) !important;
+}
+
+.cashier-v2 :is(.customize-choice-button, .customize-addon-button, .checkout-totals, .detail-meta > div, .detail-items article, .detail-summary > div, .cashier-empty-state),
+html[data-theme='dark'] .cashier-v2 :is(.customize-choice-button, .customize-addon-button, .checkout-totals, .detail-meta > div, .detail-items article, .detail-summary > div, .cashier-empty-state) {
+  border-color: var(--line) !important;
+  background: var(--cashier-paper) !important;
+  color: var(--ink) !important;
+}
+
+.cashier-v2 :is(.customize-choice-button.active, .customize-choice-button[aria-pressed='true'], .customize-addon-button.active, .customize-addon-button[aria-pressed='true']) {
+  border-color: #6b368f !important;
+  background: #f0e8f6 !important;
+  color: #3f145f !important;
+}
+
+html[data-theme='dark'] .cashier-v2 :is(.customize-choice-button.active, .customize-choice-button[aria-pressed='true'], .customize-addon-button.active, .customize-addon-button[aria-pressed='true']) {
+  border-color: #8452a3 !important;
+  background: #352044 !important;
+  color: #f7f2fa !important;
+}
+
+.cashier-v2 .receipt-preview-shell,
+html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
+  background: var(--canvas) !important;
+}
+
+/* Receipts intentionally remain paper-white for accurate print output. */
+.cashier-v2 .receipt-print-area {
+  background: #fff !important;
+  color: #111 !important;
+}
+
+/* Shared account overlays */
+.auth-confirm-modal {
+  border-color: #e1d5e9;
+  background:
+    radial-gradient(circle at top, rgba(240, 232, 246, .96) 0%, rgba(255, 255, 255, 0) 30%),
+    #fff;
+  box-shadow: 0 34px 90px rgba(33, 0, 52, .24);
+}
+
+.auth-confirm-modal h2,
+.auth-welcome-popup__copy b { color: #3f145f; }
+.auth-confirm-modal p { color: #716278; }
+.auth-welcome-popup {
+  border-color: #e1d5e9;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 24px 60px rgba(33, 0, 52, .16);
+}
+.auth-welcome-popup__icon {
+  background: #f0e8f6;
+  color: #542475;
+  box-shadow: inset 0 0 0 1px #e1d5e9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout:is(.legacy-admin, .legacy-staff) *,
+  .cashier-v2 * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Final admin color and control alignment cleanup */
+.app-layout.legacy-admin .txn-report-total {
+  background: linear-gradient(135deg, #542475, #2d0a4e);
+  box-shadow: 0 14px 28px rgba(45, 10, 78, .16);
+}
+.app-layout.legacy-admin .txn-report-total::after {
+  background: radial-gradient(circle, rgba(216, 183, 232, .32), rgba(216, 183, 232, 0) 68%);
+}
+.app-layout.legacy-admin .txn-report-stat::before,
+.app-layout.legacy-admin :is(.txn-report-stat--transactions, .txn-report-stat--completed, .txn-report-stat--average)::before {
+  background: var(--mgmt-primary);
+}
+.app-layout.legacy-admin :is(.txn-report-stat--transactions, .txn-report-stat--completed, .txn-report-stat--average)::after {
+  background: radial-gradient(circle, rgba(107, 54, 143, .14), rgba(107, 54, 143, 0) 70%);
+}
+.app-layout.legacy-admin :is(.txn-report-stat--transactions, .txn-report-stat--completed, .txn-report-stat--average) > b,
+.app-layout.legacy-admin :is(.txn-ledger-heading h2, .txn-table-summary b, .txn-pagination-summary b, .txn-page-nav span b, .txn-section-heading h3, .txn-info-card b) {
+  color: var(--mgmt-primary) !important;
+}
+.app-layout.legacy-admin :is(.status-chip--completed, .status-chip--received, .status-chip--delivery) {
+  border-color: #c9a9dc;
+  background: #f0e8f6;
+  color: #542475;
+}
+.app-layout.legacy-admin .txn-filter-chip {
+  border: 1px solid #d9c6e5;
+  background: #f0e8f6;
+  color: #542475;
+}
+.app-layout.legacy-admin .txn-filter-chip button {
+  background: rgba(84, 36, 117, .12);
+  color: #542475;
+}
+.app-layout.legacy-admin .txn-page-nav button,
+.app-layout.legacy-admin .txn-footer-more summary {
+  color: var(--mgmt-primary);
+}
+.app-layout.legacy-admin .txn-table tbody tr:hover,
+.app-layout.legacy-admin .txn-row-menu button:hover {
+  background: var(--mgmt-hover);
+}
+
+.app-layout.legacy-admin .inv-tabs button.active,
+.app-layout.legacy-admin .menu-view-toggle button.active {
+  border-color: var(--mgmt-primary);
+  background: var(--mgmt-primary);
+  color: var(--mgmt-on-primary);
+}
+.app-layout.legacy-admin .menu-bulk-bar {
+  border-color: #d9c6e5;
+  background: #f0e8f6;
+  color: #542475;
+}
+.app-layout.legacy-admin .menu-option-card:has(input:checked),
+.app-layout.legacy-admin .category-workspace-tabs button.active {
+  border-color: #c9a9dc;
+  background: #f0e8f6;
+  color: #542475;
+}
+.app-layout.legacy-admin .menu-option-card input { accent-color: #542475; }
+
+.app-layout.legacy-admin .stock-add-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: none;
+  padding: 0 18px;
+  border: 1px solid #c9a9dc;
+  border-radius: 10px;
+  background: #f0e8f6;
+  color: #542475;
+  font: inherit;
+  font-size: .8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.app-layout.legacy-admin .stock-add-button:hover {
+  border-color: #542475;
+  background: #e7d8f0;
+}
+.app-layout.legacy-admin .stock-add-button:focus-visible {
+  outline: 3px solid rgba(84, 36, 117, .25);
+  outline-offset: 2px;
+}
+@media (max-width: 700px) {
+  .app-layout.legacy-admin .stock-add-button { width: 100%; }
+}
+
+/* Simple settings overview */
+.app-layout.legacy-admin .simple-settings {
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 18px;
+  background: var(--mgmt-surface);
+  box-shadow: 0 12px 30px rgba(45, 10, 78, .07);
+}
+.simple-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--mgmt-border);
+}
+.simple-settings-header > span,
+.simple-settings-icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--mgmt-hover);
+  color: var(--mgmt-primary);
+}
+.simple-settings-header h2 { margin: 0; color: var(--mgmt-heading); font-size: 1.05rem; }
+.simple-settings-header p { margin: 4px 0 0; color: var(--mgmt-muted); font-size: .78rem; }
+.simple-settings-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--mgmt-border);
+}
+.simple-settings-list > div {
+  min-width: 0;
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--mgmt-surface);
+}
+.simple-settings-list > div > span:last-child { min-width: 0; display: grid; gap: 4px; }
+.simple-settings-list small { color: var(--mgmt-muted); font-size: .7rem; }
+.simple-settings-list b { overflow: hidden; color: var(--mgmt-heading); font-size: .84rem; text-overflow: ellipsis; white-space: nowrap; }
+.simple-settings-links { display: grid; gap: 8px; padding: 16px; border-top: 1px solid var(--mgmt-border); }
+.simple-settings-links a {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 12px;
+  background: var(--mgmt-subtle);
+  color: var(--mgmt-primary);
+}
+.simple-settings-links a > span { min-width: 0; display: grid; gap: 2px; }
+.simple-settings-links b { color: var(--mgmt-heading); font-size: .8rem; }
+.simple-settings-links small { color: var(--mgmt-muted); font-size: .68rem; }
+.simple-settings-links a:hover { border-color: #c9a9dc; background: var(--mgmt-hover); }
+.simple-settings-links a:focus-visible { outline: 3px solid rgba(84, 36, 117, .25); outline-offset: 2px; }
+@media (max-width: 680px) {
+  .simple-settings-list { grid-template-columns: 1fr; }
+}
+
+.app-layout.legacy-admin .ua-stat-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 760px) {
+  .app-layout.legacy-admin .ua-stat-rail { grid-template-columns: 1fr; }
+  .app-layout.legacy-admin .ua-stat-rail > div { border-right: 0; border-bottom: 1px solid var(--mgmt-border); }
+  .app-layout.legacy-admin .ua-stat-rail > div:last-child { border-bottom: 0; }
+}
