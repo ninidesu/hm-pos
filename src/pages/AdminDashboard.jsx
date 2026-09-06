@@ -251,27 +251,25 @@ function DashboardContent({ metrics }) {
       </div>
     </section>
 
-    <section className="ad-kpi-section" aria-labelledby="today-heading">
+    <section className="ad-dashboard-content" aria-labelledby="today-heading">
       <h2 className="sr-only" id="today-heading">Today's overview</h2>
       <div className="ad-kpi-grid ad-reference-kpis">
         <KpiCard icon={CircleDollarSign} label="Net sales" value={metrics.totalSales} valueFormat={money} comparison={metrics.salesChangePct} detail="vs yesterday" tone="purple" trend={metrics.salesTrend} trendLabel="Net sales trend for the last 14 days" />
         <KpiCard icon={ShoppingBag} label="Orders" value={metrics.totalOrders} valueFormat={formatCount} detail={`${metrics.completedOrders} completed`} tone="cream" trend={metrics.ordersTrend} trendLabel="Orders trend for the last 14 days" />
         <KpiCard icon={WalletCards} label="Average order" value={metrics.avgOrderValue} valueFormat={money} detail="Paid completed orders" tone="blue" trend={metrics.averageOrderTrend} trendLabel="Average order trend for the last 14 days" />
       </div>
-    </section>
-
-    <section className="ad-dashboard-analytics-row ad-dashboard-analytics-row--overview" aria-label="Sales overview and recent transactions">
-      <Panel title="Sales overview" detail="Completed walk-in sales" action={<Link to="/admin/transactions">View transactions <ArrowRight size={15} /></Link>} className="ad-v2-sales-panel">
-        <SalesLineChart points={metrics.salesTrend} comparison={metrics.salesChangePct} />
-      </Panel>
-      <RecentTransactions orders={metrics.recentOrders} />
-    </section>
-
-    <section className="ad-dashboard-secondary-grid" aria-label="Additional dashboard summaries">
-      <LowStockAlerts items={metrics.lowStockItems} />
-      <Panel title="Top selling items" detail="Last 14 days" action={<Link to="/admin/transactions">View sales <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-rail-sellers">
-        <RankedProducts products={metrics.bestSellers} />
-      </Panel>
+      <div className="ad-dashboard-content-row ad-dashboard-content-row--primary" aria-label="Sales overview and recent transactions">
+        <Panel title="Sales overview" detail="Completed walk-in sales" action={<Link to="/admin/transactions">View transactions <ArrowRight size={15} /></Link>} className="ad-v2-sales-panel">
+          <SalesLineChart points={metrics.salesTrend} comparison={metrics.salesChangePct} />
+        </Panel>
+        <RecentTransactions orders={metrics.recentOrders} />
+      </div>
+      <div className="ad-dashboard-content-row ad-dashboard-content-row--secondary" aria-label="Additional dashboard summaries">
+        <LowStockAlerts items={metrics.lowStockItems} />
+        <Panel title="Top selling items" detail="Last 14 days" action={<Link to="/admin/transactions">View sales <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-rail-sellers">
+          <RankedProducts products={metrics.bestSellers} />
+        </Panel>
+      </div>
     </section>
   </div>
 }

@@ -1270,3 +1270,58 @@ html[data-staff-motion="reduce"] .app-layout.legacy-admin .cancel-animated-path,
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Keep all dashboard data below the welcome card in one stable document flow. */
+.app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-content {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--ad-v2-gap, 20px);
+  visibility: visible;
+  opacity: 1;
+}
+
+.app-layout.legacy-admin .ad-dashboard-content-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 18px;
+}
+
+.app-layout.legacy-admin .ad-dashboard-content-row > .ad-panel {
+  min-width: 0;
+  height: 100%;
+  visibility: visible;
+  opacity: 1;
+}
+
+.app-layout.legacy-admin .ad-dashboard-content-row--primary .ad-transactions-table {
+  min-width: 610px;
+}
+
+.app-layout.legacy-admin .ad-dashboard-content-row--primary .ad-transactions-table :is(th, td):nth-child(3),
+.app-layout.legacy-admin .ad-dashboard-content-row--primary .ad-transactions-table :is(th, td):nth-child(4) {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .app-layout.legacy-admin .ad-dashboard-content-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-layout.legacy-admin .ad-dashboard-content-row--primary .ad-transactions-table {
+    min-width: 780px;
+  }
+
+  .app-layout.legacy-admin .ad-dashboard-content-row--primary .ad-transactions-table :is(th, td):nth-child(3),
+  .app-layout.legacy-admin .ad-dashboard-content-row--primary .ad-transactions-table :is(th, td):nth-child(4) {
+    display: table-cell;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-layout.legacy-admin .ad-dashboard-content .ad-reference-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
