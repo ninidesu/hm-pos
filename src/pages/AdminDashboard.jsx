@@ -25,7 +25,6 @@ const adminPageTitles = {
   '/admin/transactions': 'Transaction History',
   '/admin/inventory-report': 'Inventory Report',
   '/admin/users-access/users': 'Users & Access',
-  '/admin/settings/activity': 'Settings',
   '/admin/settings': 'Settings',
   '/admin/preferences': 'Settings',
 }
@@ -207,7 +206,7 @@ function smoothSparklinePath(points, x, y) {
 export default function AdminDashboard() {
   const { pathname } = useLocation()
   if (pathname === '/admin/team') return <Navigate to="/admin/users-access/users" replace />
-  if (pathname === '/admin/logs' || pathname === '/admin/users-access/activity') return <Navigate to="/admin/settings/activity" replace />
+  if (pathname === '/admin/logs' || pathname === '/admin/users-access/activity' || pathname === '/admin/settings/activity') return <Navigate to="/admin/settings" replace />
   if (pathname === '/admin/users-access') return <Navigate to="/admin/users-access/users" replace />
   if (pathname === '/admin/users-access/approvals') return <Navigate to="/admin/users-access/users" replace />
   if (pathname.startsWith('/admin/users-access/')) return <UsersAccessPage />
@@ -216,7 +215,7 @@ export default function AdminDashboard() {
   if (pathname === '/admin/menu') return <ManageMenuPage role="admin" />
   if (pathname === '/admin/inventory') return <InventoryStockPage role="admin" />
   if (pathname === '/admin/inventory-report') return <InventoryStockPage role="admin" />
-  if (pathname === '/admin/transactions') return <TransactionsPage />
+  if (pathname === '/admin/transactions' || pathname.startsWith('/admin/transactions/')) return <TransactionsPage />
   if (pathname !== '/admin') return <AppShell role="admin" title={adminPageTitles[pathname] || 'Dashboard'} />
   return <AdminDashboardHome />
 }

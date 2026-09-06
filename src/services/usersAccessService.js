@@ -72,9 +72,24 @@ export async function removePortalUser(userId) {
 }
 
 export async function updatePortalUser(userId, values) {
+  const { data, error } = await supabase.functions.invoke('admin-manage-user', {
+    body: {
+      action: 'update',
+      userId,
+      username: values.username,
+      email: values.email,
+      password: values.password || undefined,
+    },
+  })
+  if (error) throw setupAwareError(error)
+  if (!data?.success) throw new Error(data?.error || 'Could not update the user.')
+  return data.user
+}
+
+export async function updatePortalUserRole(userId, role) {
   const { data, error } = await supabase.rpc('admin_update_portal_user', {
     p_user_id: userId,
-    p_role: values.role,
+    p_role: role,
   })
   if (error) throw setupAwareError(error)
   return data

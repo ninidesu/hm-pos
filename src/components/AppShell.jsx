@@ -17,6 +17,7 @@ const adminGroups = [
   { label: 'Store operations', links: [['Transaction History','/admin/transactions'],['Manage Menu','/admin/menu'],['Stock Management','/admin/inventory']] },
   { label: 'Access', links: [['Users & Access','/admin/users-access/users'],['Settings','/admin/settings']] },
 ]
+const adminMobileLinks = adminGroups.flatMap((group) => group.links)
 
 function notificationTime(value) {
   const elapsed = Date.now() - new Date(value).getTime()
@@ -40,7 +41,7 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
   const notificationAnchorRef = useRef(null)
   const { profile, user } = useAuth()
   const accountRoleLabel = role === 'admin' ? 'Admin / Manager' : 'Cashier'
-  const accountDisplayName = profile?.full_name || profile?.username || profile?.email || user?.email || accountRoleLabel
+  const accountDisplayName = profile?.username || profile?.full_name || profile?.email || user?.email || accountRoleLabel
   const accountInitials = accountDisplayName
     .replace(/@.*$/, '')
     .split(/\s+/)
@@ -124,7 +125,7 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
       const quantity = Number(stock?.quantity)
       const minimum = Number(stock?.min_stock_level)
       if (!Number.isFinite(quantity) || !Number.isFinite(minimum) || minimum <= 0 || quantity > minimum) return
-      add({ category: 'inventory', title: quantity <= 0 ? 'Item out of stock' : 'Low stock detected', message: `Stock is at ${quantity}; the reorder level is ${minimum}.` })
+      add({ category: 'inventory', title: quantity <= 0 ? 'Item out of stock' : 'Low stock detected', message: `Stock is at ${quantity}; the low stock indicator is ${minimum}.` })
     })
     if (staffPreferences.notify_menu_changes) channel.on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, ({ eventType, new: item, old }) => {
       const name = item?.name || old?.name || 'A menu item'
@@ -181,6 +182,9 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
         <button className="sidebar-exit" type="button" onClick={() => setLogoutOpen(true)}><LogOut size={19}/><span>Logout</span></button>
       </div>
     </aside>
+    {role === 'admin' && <nav className="internal-mobile-nav" aria-label="Admin navigation">
+      {adminMobileLinks.map(([label, to]) => <NavLink key={to} to={to} end={to === '/admin'}>{label}</NavLink>)}
+    </nav>}
     <main className="app-main internal-main"><header className={`page-header internal-page-header${eyebrow ? '' : ' is-compact'}${role === 'admin' ? ' is-admin-surface-header' : ''}`}><div><div className={`internal-title-row${titleActions ? ' has-title-actions' : ''}`}><h1>{title}</h1>{titleActions}</div>{eyebrow && <span>{eyebrow}</span>}</div><div className="header-actions"><div className="internal-utility-bar" aria-label="Workspace utilities"><div className="internal-live-datetime">{role === 'admin' && title === 'Dashboard' && <CalendarDays size={16} aria-hidden="true" />}<div className="internal-live-datetime-copy"><span>{new Intl.DateTimeFormat('en-PH', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }).format(now)}</span><b>{new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true }).format(now)} PHT</b></div></div><div className="internal-notification-anchor" ref={notificationAnchorRef}><button type="button" className="internal-utility-button" aria-label={`Open notifications${visibleNotificationCount ? `, ${visibleNotificationCount} unread` : ''}`} aria-expanded={['staff', 'admin'].includes(role) ? notificationsOpen : undefined} aria-controls={role === 'staff' ? 'staff-notification-center' : undefined} title="Notifications" onClick={openNotifications}><Bell size={18} />{visibleNotificationCount > 0 && <span className="internal-utility-badge">{visibleNotificationCount > 99 ? '99+' : visibleNotificationCount}</span>}</button>{['staff', 'admin'].includes(role) && notificationsOpen && <aside className="staff-notification-center" id="staff-notification-center" role="dialog" aria-modal="false" aria-labelledby="staff-notification-title"><header><div><span>Notification center</span><h2 id="staff-notification-title">Recent activity</h2></div><button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Close notifications"><X size={18} /></button></header><div className="staff-notification-actions"><button type="button" onClick={readAllNotifications} disabled={!unreadNotificationCount}><CheckCheck size={16} />Read all</button><button type="button" className="is-destructive" onClick={clearNotifications} disabled={!notifications.length}><Trash2 size={16} />Clear</button></div><div className="staff-notification-list">{notifications.length ? notifications.map((notification) => <button type="button" className={notification.read ? 'is-read' : 'is-unread'} data-category={notification.category} key={notification.id} onClick={() => readNotification(notification.id)}><i aria-hidden="true" /><span><b>{notification.title}</b><small>{notification.message}</small><time dateTime={notification.createdAt}>{notificationTime(notification.createdAt)}</time></span></button>) : <div className="staff-notification-empty"><Bell size={22} /><b>{role === 'admin' && notificationCount > 0 ? `${notificationCount} items need attention` : 'You’re all caught up'}</b><span>{role === 'admin' && notificationCount > 0 ? 'Review the dashboard attention cards for details.' : 'Operational alerts will stack here as they arrive.'}</span></div>}</div><footer><button type="button" onClick={() => { setNotificationsOpen(false); navigate(role === 'admin' ? '/admin/preferences' : '/staff/settings') }}>Notification settings</button></footer></aside>}</div><button type="button" className="internal-utility-button" aria-label={refreshing ? 'Refreshing current page data' : 'Refresh current page data'} aria-busy={refreshing} title={refreshing ? 'Refreshing data…' : 'Refresh data'} onClick={refreshPage} disabled={refreshing}><RefreshCw size={18} className={refreshing ? 'spin' : ''} /></button></div>{actions}</div></header>{children}</main>
     <LogoutConfirmModal open={logoutOpen} busy={loggingOut} onCancel={() => setLogoutOpen(false)} onConfirm={confirmLogout} />
   </div>

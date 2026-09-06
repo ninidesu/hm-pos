@@ -1,17 +1,18 @@
 import {
-  Activity, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight,
+  Activity, AlertTriangle, BadgeCheck, CalendarDays, ChevronLeft, ChevronRight,
   CircleUserRound, Download, FilterX, History,
-  KeyRound, MailPlus, Search, ShieldCheck, Trash2,
+  MailPlus, Pencil, Search, ShieldCheck, Trash2,
   UserPlus, Users, X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { useAuth } from '../context/AuthContext'
+import { saveStaffUsername } from '../services/staffSettingsService'
 import { describeError } from '../utils/describeError'
 import { EMAIL_MAX_LENGTH, isValidEmail, sanitizePersonName, sanitizeUsername } from '../utils/inputValidation'
 import {
   PORTAL_ROLES, downloadAuditCsv, fetchManagedUsers, fetchPortalAuditEvents,
-  fetchPortalAuditExport, invitePortalUser, removePortalUser, sendPortalPasswordReset, updatePortalUser,
+  fetchPortalAuditExport, invitePortalUser, removePortalUser, updatePortalUser, updatePortalUserRole,
 } from '../services/usersAccessService'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
@@ -58,7 +59,7 @@ export default function UsersAccessPage() {
 }
 
 function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, updateProfile: updateCurrentProfile } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -66,6 +67,7 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
   const [role, setRole] = useState('all')
   const [sort, setSort] = useState('name')
   const [selected, setSelected] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
   const [toast, setToast] = useState(null)
 
   const load = useCallback(async () => {
@@ -144,7 +146,8 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
     </>}
 
     <InviteUserModal open={inviteOpen} onClose={() => setInviteOpen(false)} onSuccess={(message) => refreshAfterChange(message)} />
-    <UserDrawer user={selected} currentUserId={currentUser?.id} onClose={() => setSelected(null)} onChanged={(message) => { setSelected(null); refreshAfterChange(message) }} />
+    <UserDrawer user={selected} currentUserId={currentUser?.id} onClose={() => setSelected(null)} onEdit={() => { setEditTarget(selected); setSelected(null) }} onChanged={(message) => { setSelected(null); refreshAfterChange(message) }} />
+    <EditUserModal user={editTarget} currentUserId={currentUser?.id} updateCurrentProfile={updateCurrentProfile} onClose={() => setEditTarget(null)} onChanged={(message) => { setEditTarget(null); refreshAfterChange(message) }} />
     {toast && <div className={`ua-toast ua-toast--${toast.tone}`} role="status"><BadgeCheck size={18}/>{toast.message}</div>}
   </section>
 }
@@ -182,7 +185,7 @@ function InviteUserModal({ open, onClose, onSuccess }) {
   </form></div>
 }
 
-function UserDrawer({ user, currentUserId, onClose, onChanged }) {
+function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
   const [role, setRole] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -191,21 +194,17 @@ function UserDrawer({ user, currentUserId, onClose, onChanged }) {
   useEscapeClose(Boolean(user) && !removeOpen, onClose)
   useEffect(() => {
     if (!user) return
-    setRole(user.role === 'manager' ? 'admin' : PORTAL_ROLES.some((item) => item.value === user.role) ? user.role : 'cashier'); setError(''); setRemoveOpen(false)
+    setRole(user.role === 'manager' ? 'admin' : PORTAL_ROLES.some((item) => item.value === user.role) ? user.role : 'cashier')
+    setError('')
+    setRemoveOpen(false)
     fetchPortalAuditEvents({ actorId: user.id }, { pageSize: 6 }).then(({ events }) => setRecent(events)).catch(() => setRecent([]))
   }, [user])
   if (!user) return null
   const isSelf = user.id === currentUserId
-  const save = async () => {
+  const saveRole = async () => {
     setBusy(true); setError('')
-    try { await updatePortalUser(user.id, { role }); onChanged(`${user.full_name || user.email} was updated.`) }
+    try { await updatePortalUserRole(user.id, role); onChanged(`${user.full_name || user.email} was updated.`) }
     catch (cause) { setError(describeError(cause, 'Could not update this user.')) }
-    finally { setBusy(false) }
-  }
-  const resetPassword = async () => {
-    setBusy(true); setError('')
-    try { await sendPortalPasswordReset(user.id); onChanged(`Password reset sent to ${user.email}.`) }
-    catch (cause) { setError(describeError(cause, 'Could not send the password reset.')) }
     finally { setBusy(false) }
   }
   return <><button className="ua-drawer-scrim" onClick={onClose} aria-label="Close user details"/><aside className="ua-drawer" role="dialog" aria-modal="true" aria-labelledby="user-drawer-title">
@@ -223,8 +222,59 @@ function UserDrawer({ user, currentUserId, onClose, onChanged }) {
       </section>
       {error && <p className="ua-form-error" role="alert">{error}</p>}
     </div>
-    <footer><button type="button" className="ua-danger-action" onClick={() => setRemoveOpen(true)} disabled={busy || isSelf} title={isSelf ? 'You cannot remove your own account' : undefined}><Trash2 size={16}/>Remove User</button><button type="button" className="ua-secondary-action" onClick={resetPassword} disabled={busy}><KeyRound size={16}/>Send password reset</button><button type="button" className="ua-primary-action" onClick={save} disabled={busy || role === (user.role === 'manager' ? 'admin' : user.role)}>{busy ? 'Saving…' : 'Save changes'}</button></footer>
+    <footer><button type="button" className="ua-danger-action" onClick={() => setRemoveOpen(true)} disabled={busy || isSelf} title={isSelf ? 'You cannot remove your own account' : undefined}><Trash2 size={16}/>Remove User</button><button type="button" className="ua-secondary-action" onClick={onEdit} disabled={busy}><Pencil size={16}/>Edit account</button><button type="button" className="ua-primary-action" onClick={saveRole} disabled={busy || role === (user.role === 'manager' ? 'admin' : user.role)}>{busy ? 'Saving…' : 'Save role'}</button></footer>
   </aside><RemoveUserConfirm open={removeOpen} user={user} onClose={() => setRemoveOpen(false)} onRemoved={() => onChanged(`${user.full_name || user.email} was removed from portal access.`)} /></>
+}
+
+function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onChanged }) {
+  const [values, setValues] = useState({ username: '', email: '', password: '' })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  useEscapeClose(Boolean(user) && !busy, onClose)
+  useEffect(() => {
+    if (!user) return
+    setValues({ username: user.username || '', email: user.email || '', password: '' })
+    setBusy(false)
+    setError('')
+  }, [user])
+  if (!user) return null
+  const isCurrentAdmin = user.id === currentUserId && ['admin', 'manager'].includes(user.role)
+  const submit = async (event) => {
+    event.preventDefault()
+    setError('')
+    const username = values.username.trim()
+    if (!/^[A-Za-z0-9._-]{3,24}$/.test(username)) return setError('Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens.')
+    const email = isCurrentAdmin ? undefined : values.email.trim().toLowerCase()
+    const password = isCurrentAdmin ? undefined : values.password
+    if (!isCurrentAdmin && !isValidEmail(email)) return setError('Enter a valid email address.')
+    if (password && (password.length < 8 || password.length > 72)) return setError('Password must be 8 to 72 characters.')
+    setBusy(true)
+    try {
+      if (isCurrentAdmin) {
+        const updatedUser = await saveStaffUsername(user.id, username)
+        updateCurrentProfile?.((current) => current ? { ...current, username: updatedUser.username } : current)
+      } else {
+        await updatePortalUser(user.id, { username, email, password })
+      }
+      onChanged(`${username} was updated.`)
+    } catch (cause) {
+      setError(describeError(cause, 'Could not update this user.'))
+    } finally {
+      setBusy(false)
+    }
+  }
+  return <div className="ua-overlay" onMouseDown={busy ? undefined : onClose}>
+    <form className="ua-modal ua-edit-user-modal" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="edit-user-title">
+      <header><div><span className="ua-modal-icon"><Pencil size={20}/></span><div><h2 id="edit-user-title">Edit {user.role === 'cashier' ? 'cashier' : 'admin'} account</h2><p>{isCurrentAdmin ? 'Update your administration username.' : 'Update this user’s sign-in details.'}</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close edit user dialog"><X/></button></header>
+      <div className="ua-form-grid">
+        <label className="ua-field ua-field--wide"><span>Username</span><input autoFocus required value={values.username} onChange={(event) => setValues({ ...values, username: sanitizeUsername(event.target.value, 24) })} autoComplete="username" minLength={3} maxLength={24} pattern="[A-Za-z0-9._-]+"/></label>
+        {!isCurrentAdmin && <><label className="ua-field ua-field--wide"><span>Email</span><input required type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value.slice(0, EMAIL_MAX_LENGTH) })} autoComplete="email" maxLength={EMAIL_MAX_LENGTH}/></label>
+        <label className="ua-field ua-field--wide"><span>Password</span><input type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 72) })} autoComplete="new-password" minLength={values.password ? 8 : undefined} maxLength={72} placeholder="Enter a new password"/><small>Existing passwords cannot be displayed. Leave blank to keep the current password.</small></label></>}
+      </div>
+      {error && <p className="ua-form-error" role="alert">{error}</p>}
+      <footer><button type="button" className="ua-secondary-action" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="ua-primary-action" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button></footer>
+    </form>
+  </div>
 }
 
 function RemoveUserConfirm({ open, user, onClose, onRemoved }) {
@@ -233,19 +283,17 @@ function RemoveUserConfirm({ open, user, onClose, onRemoved }) {
   useEscapeClose(open && !busy, onClose)
   useEffect(() => { if (open) { setBusy(false); setError('') } }, [open])
   if (!open) return null
-
   const confirm = async () => {
     setBusy(true); setError('')
     try { await removePortalUser(user.id); onClose(); onRemoved() }
     catch (cause) { setError(describeError(cause, 'Could not remove this user. Please try again.')) }
     finally { setBusy(false) }
   }
-
   const name = user.full_name || user.username || user.email
   return <div className="ua-overlay ua-confirm-overlay" onMouseDown={busy ? undefined : onClose}>
     <section className="ua-modal ua-confirm-modal" onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true" aria-labelledby="remove-user-title" aria-describedby="remove-user-description">
       <header><div><span className="ua-modal-icon ua-modal-icon--danger"><Trash2 size={20}/></span><div><h2 id="remove-user-title">Remove {name}?</h2><p>Confirm permanent portal removal.</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close remove user confirmation"><X/></button></header>
-      <div className="ua-confirm-copy" id="remove-user-description"><p>This removes the user’s portal sign-in. Their recorded activity stays in Activity Logs for auditing, and this action cannot be undone.</p></div>
+      <div className="ua-confirm-copy" id="remove-user-description"><p>This removes the user’s portal sign-in. Their recorded activity is retained for auditing, and this action cannot be undone.</p></div>
       {error && <p className="ua-form-error" role="alert">{error}</p>}
       <footer><button autoFocus type="button" className="ua-secondary-action" onClick={onClose} disabled={busy}>Cancel</button><button type="button" className="ua-danger-action ua-danger-action--solid" onClick={confirm} disabled={busy}>{busy ? 'Removing…' : 'Remove User'}</button></footer>
     </section>

@@ -195,6 +195,11 @@ function isMeal(product) {
   return itemType === 'meal' || /\bmeals?\b/.test(category)
 }
 
+function isGuavaShake(product) {
+  const identifier = String(product.slug || product.name || '').trim().toLowerCase().replace(/[\s_]+/g, '-')
+  return identifier === 'guava-shake'
+}
+
 function productOptionDefaults(product) {
   const variantConfig = parseVariantConfig(product.variantConfig)
   const variantOptions = variantOptionsFromConfig(variantConfig, product)
@@ -204,7 +209,7 @@ function productOptionDefaults(product) {
     // item's name, category, or type: many drinks and foods are fixed items.
     allowSugar: truthy(product.allowSugar),
     allowIce: truthy(product.allowIce),
-    allowAddons: truthy(product.allowAddons) && !isMeal(product),
+    allowAddons: truthy(product.allowAddons) && !isMeal(product) && !isGuavaShake(product),
     temperatureType: normalizeTemperatureType(product.temperatureType),
     variantConfig,
     variantOptions,
@@ -213,6 +218,7 @@ function productOptionDefaults(product) {
 function normalizeProduct(row) {
   const product = {
     id: row.id,
+    slug: row.slug || '',
     name: row.name || row.product_name || 'Menu item',
     category: row.subcategories?.display_name || row.subcategories?.name || row.category_name || row.subcategory || row.main_categories?.display_name || row.main_categories?.name || row.main_category || 'Menu',
     description: row.description || '',
@@ -865,11 +871,12 @@ function ProductGrid({ products, onAdd }) {
       <img src={item.image} alt={item.name} />
       <div className="cashier-product-body">
         <small>{item.category}{hasOptions ? ' / Customizable' : ''}</small>
-        <h3>{item.name}</h3>        <footer>
+        <h3>{item.name}</h3>
+        <StockPreview stock={item.stock} />
+        <footer>
           <strong>{item.price ? peso(item.price) : 'No price set'}</strong>
           <button type="button" disabled={!item.price || !item.isAvailable} onClick={(event) => { event.stopPropagation(); onAdd(item) }} aria-label={`Add ${item.name}`}><Plus size={18} /></button>
         </footer>
-        <StockPreview stock={item.stock} />
       </div>
     </article>
   })}</div>
@@ -877,18 +884,16 @@ function ProductGrid({ products, onAdd }) {
 
 function StockPreview({ stock }) {
   if (!stock || stock.state === 'not_linked') {
-    return <p className="cashier-product-stock is-muted"><span>Stock</span><b>Not linked</b><small>Set a stock link in Stock Management</small></p>
+    return <p className="cashier-product-stock is-muted">Stock not linked</p>
   }
   if (stock.state === 'unavailable') {
-    return <p className="cashier-product-stock is-muted"><span>Stock</span><b>Unavailable</b><small>Stock data could not be loaded</small></p>
+    return <p className="cashier-product-stock is-muted">Stock unavailable</p>
   }
   const quantity = Number(stock.quantity || 0)
   const unit = stock.unit || 'units'
   const formattedQuantity = Number.isInteger(quantity) ? String(quantity) : quantity.toFixed(2)
-  const saleUnits = Math.max(0, Math.floor(quantity / Math.max(0.0001, Number(stock.unitsPerSale || 1))))
   const tone = quantity <= 0 ? 'is-out' : quantity <= Number(stock.minStockLevel || 0) ? 'is-low' : 'is-ready'
-  const saleDetail = Number(stock.unitsPerSale || 1) > 1 ? `≈ ${saleUnits} sale${saleUnits === 1 ? '' : 's'}` : stock.sourceName || 'Linked inventory'
-  return <p className={`cashier-product-stock ${tone}`}><span>Stock</span><b>{formattedQuantity} {unit}</b><small>{saleDetail}</small></p>
+  return <p className={`cashier-product-stock ${tone}`}>{formattedQuantity} {unit} available</p>
 }
 
 function POSCart({ cart, onQty, onEdit }) {

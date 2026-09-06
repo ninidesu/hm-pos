@@ -3,11 +3,20 @@ import { validateImageFile } from '../utils/imageUpload'
 
 const fallbackImage = null
 
+function isGuavaShake(row) {
+  const identifier = String(row.slug || row.name || '').trim().toLowerCase().replace(/[\s_]+/g, '-')
+  return identifier === 'guava-shake'
+}
+
 function imagePath(value) {
   if (!value) return fallbackImage
-  const clean = String(value).replace(/^\/+/, '')
+  const raw = String(value).trim()
+  if (!raw) return fallbackImage
+  if (/^(https?:\/\/|blob:|data:)/i.test(raw)) return raw
+
+  const clean = raw.replace(/^\/+/, '')
   if (clean.startsWith('assets/')) return `/${clean}`
-  return value.startsWith('/') ? value : `/${value}`
+  return raw.startsWith('/') ? raw : `/${raw}`
 }
 
 function normalizeMenuItem(row, orderCount = 0) {
@@ -26,7 +35,7 @@ function normalizeMenuItem(row, orderCount = 0) {
     temperatureType: row.temperature_type || 'none',
     allowIce: Boolean(row.allow_ice),
     allowSugar: Boolean(row.allow_sugar),
-    allowAddons: Boolean(row.allow_addons),
+    allowAddons: !isGuavaShake(row) && Boolean(row.allow_addons),
     imageUrl: row.image_url || '',
     image: imagePath(row.image_url),
     manualAvailable: Boolean(row.manual_available),

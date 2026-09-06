@@ -7788,31 +7788,21 @@ html[data-theme] .cashier-v2 .cashier-brand-mark img {
 }
 /* HM POS stock visibility on cashier menu cards */
 .cashier-v2 .cashier-product-stock {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 2px 8px;
-  margin: 12px 0 0;
-  padding: 8px 10px;
-  border: 1px solid rgba(29, 76, 54, .12);
-  border-radius: 10px;
-  background: rgba(239, 248, 242, .72);
-  color: #244e3a;
-  line-height: 1.2;
+  display: block !important;
+  min-height: 0 !important;
+  margin: 2px 0 7px !important;
+  color: #542475;
+  font-size: .72rem;
+  font-weight: 750;
+  line-height: 1.25;
 }
-.cashier-v2 .cashier-product-stock > span {
-  grid-row: span 2;
-  align-self: center;
-  color: #6b7d72;
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+.cashier-v2 .legacy-pos-products article > .cashier-product-body {
+  height: auto !important;
+  min-height: 118px !important;
 }
-.cashier-v2 .cashier-product-stock b { font-size: .78rem; }
-.cashier-v2 .cashier-product-stock small { color: #6b7d72; font-size: .7rem; }
-.cashier-v2 .cashier-product-stock.is-low { border-color: rgba(183, 125, 25, .3); background: #fff8e8; color: #8b5d12; }
-.cashier-v2 .cashier-product-stock.is-out { border-color: rgba(157, 42, 42, .28); background: #fff1f1; color: #9d2a2a; }
-.cashier-v2 .cashier-product-stock.is-muted { background: #f4f6f4; color: #66766d; }
+.cashier-v2 .cashier-product-stock.is-low { color: #6b368f; }
+.cashier-v2 .cashier-product-stock.is-out { color: #8f2748; }
+.cashier-v2 .cashier-product-stock.is-muted { color: #756b7c; font-weight: 650; }
 @media (prefers-reduced-motion: reduce) {
   .cashier-v2 .cashier-product-stock { transition: none; }
 }

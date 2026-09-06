@@ -1,8 +1,8 @@
-import { AlertTriangle, Ban, Eye, Printer, ReceiptText, RefreshCw, Search, X } from 'lucide-react'
+import { AlertTriangle, Ban, CheckCircle2, FileSpreadsheet, FileText, Gauge, Eye, Printer, ReceiptText, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
-import { fetchTransactions, voidOrder } from '../services/transactionsService'
+import { exportTransactionsToCsv, exportTransactionsToXlsx, fetchTransactions, voidOrder } from '../services/transactionsService'
 import { describeError } from '../utils/describeError'
 import { money } from '../utils/money'
 
@@ -64,6 +64,7 @@ export default function TransactionsPage() {
   const [voidTarget, setVoidTarget] = useState(null)
   const [voidReason, setVoidReason] = useState('')
   const [savingVoid, setSavingVoid] = useState(false)
+  const [exporting, setExporting] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -91,12 +92,42 @@ export default function TransactionsPage() {
 
   const summary = useMemo(() => {
     const completed = transactions.filter((row) => !row.isVoided)
+    const sales = completed.reduce((sum, row) => sum + row.finalTotal, 0)
     return {
-      sales: completed.reduce((sum, row) => sum + row.finalTotal, 0),
+      sales,
       completed: completed.length,
       voided: transactions.filter((row) => row.isVoided).length,
+      average: completed.length ? sales / completed.length : 0,
+      cash: completed.filter((row) => row.paymentMethod === 'cash').reduce((sum, row) => sum + row.finalTotal, 0),
+      gcash: completed.filter((row) => row.paymentMethod === 'gcash').reduce((sum, row) => sum + row.finalTotal, 0),
+      bank: completed.filter((row) => row.paymentMethod === 'bank_transfer').reduce((sum, row) => sum + row.finalTotal, 0),
     }
   }, [transactions])
+
+  const filterLabel = useMemo(() => {
+    const filters = ['Walk-in orders']
+    if (search.trim()) filters.push(`Search: ${search.trim()}`)
+    if (paymentMethod !== 'all') filters.push(`Payment: ${PAYMENT_LABELS[paymentMethod] || paymentMethod}`)
+    if (status !== 'all') filters.push(`Status: ${status === 'voided' ? 'Voided' : 'Completed'}`)
+    if (dateFrom) filters.push(`From: ${dateFrom}`)
+    if (dateTo) filters.push(`To: ${dateTo}`)
+    return filters.join(' · ')
+  }, [dateFrom, dateTo, paymentMethod, search, status])
+
+  const runExport = async (format) => {
+    if (!transactions.length || exporting) return
+    setExporting(format)
+    setError('')
+    try {
+      const input = { records: transactions, summary, filterLabel }
+      if (format === 'xlsx') await exportTransactionsToXlsx(input)
+      else exportTransactionsToCsv(input)
+    } catch (cause) {
+      setError(describeError(cause, `The ${format.toUpperCase()} report could not be exported.`))
+    } finally {
+      setExporting('')
+    }
+  }
 
   const submitVoid = async (event) => {
     event.preventDefault()
@@ -118,13 +149,25 @@ export default function TransactionsPage() {
     <section className="transactions-page">
       <header className="transactions-hero">
         <div><span className="eyebrow">Walk-in POS records</span><h2>Transactions and receipts</h2><p>Completed sales stay immutable. Incorrect sales can only be voided.</p></div>
-        <button type="button" className="ops-secondary-action" onClick={load} disabled={loading}><RefreshCw size={16} className={loading ? 'spin' : ''}/>Refresh</button>
+        <div className="transactions-hero-actions">
+          <button type="button" className="txn-export-action" onClick={() => runExport('csv')} disabled={loading || !transactions.length || Boolean(exporting)}><FileText size={16}/>{exporting === 'csv' ? 'Exporting…' : 'Export CSV'}</button>
+          <button type="button" className="txn-export-action txn-export-action--primary" onClick={() => runExport('xlsx')} disabled={loading || !transactions.length || Boolean(exporting)}><FileSpreadsheet size={16}/>{exporting === 'xlsx' ? 'Exporting…' : 'Export XLSX'}</button>
+        </div>
       </header>
 
-      <div className="txn-summary-grid">
-        <article><span>Net sales</span><b>{money(summary.sales)}</b><small>Excludes voided orders</small></article>
-        <article><span>Completed</span><b>{summary.completed}</b><small>Walk-in sales</small></article>
-        <article><span>Voided</span><b>{summary.voided}</b><small>Retained for audit</small></article>
+      <div className="txn-report-overview">
+        <article className="txn-report-total">
+          <span>Net sales</span><b>{money(summary.sales)}</b><p>Completed walk-in sales, excluding voided orders.</p>
+          <div className="txn-report-total-meta">
+            <span>Completed<b>{summary.completed}</b></span>
+            <span>Cash<b>{money(summary.cash)}</b></span>
+            <span>GCash<b>{money(summary.gcash)}</b></span>
+            <span>Bank transfer<b>{money(summary.bank)}</b></span>
+          </div>
+        </article>
+        <article className="txn-report-stat txn-report-stat--transactions"><ReceiptText size={18}/><span>Total records</span><b>{transactions.length}</b><small>Current filtered view</small></article>
+        <article className="txn-report-stat txn-report-stat--completed"><CheckCircle2 size={18}/><span>Voided</span><b>{summary.voided}</b><small>Retained for audit</small></article>
+        <article className="txn-report-stat txn-report-stat--average"><Gauge size={18}/><span>Average sale</span><b>{money(summary.average)}</b><small>Completed sales only</small></article>
       </div>
 
       <section className="transaction-controls">
@@ -136,7 +179,8 @@ export default function TransactionsPage() {
       </section>
 
       {error && <div className="ad-error" role="alert"><AlertTriangle size={18}/><span>{error}</span></div>}
-      <div className="transaction-table-wrap">
+      <div className="transaction-table-wrap" aria-busy={loading}>
+        {loading && <div className="transaction-loading" role="status">Loading transactions…</div>}
         <table className="transaction-table">
           <thead><tr><th>Receipt</th><th>Date</th><th>Cashier</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>{transactions.map((transaction) => <tr key={transaction.id}>
@@ -147,7 +191,7 @@ export default function TransactionsPage() {
             <td>{PAYMENT_LABELS[transaction.paymentMethod] || transaction.paymentMethod}</td>
             <td><b>{money(transaction.finalTotal)}</b></td>
             <td><span className={`status-chip status-chip--${transaction.isVoided ? 'cancelled' : 'completed'}`}>{transaction.status}</span></td>
-            <td><div className="transaction-row-actions"><button type="button" onClick={() => setSelected(transaction)} title="View receipt"><Eye size={15}/></button><button type="button" onClick={() => printReceipt(transaction)} title="Print receipt"><Printer size={15}/></button>{!transaction.isVoided && <button type="button" className="is-danger" onClick={() => { setVoidTarget(transaction); setVoidReason('') }} title="Void order"><Ban size={15}/></button>}</div></td>
+            <td><div className="transaction-row-actions"><button type="button" onClick={() => setSelected(transaction)} title="View receipt" aria-label={`View receipt ${transaction.receiptNumber}`}><Eye size={15}/></button><button type="button" onClick={() => printReceipt(transaction)} title="Print receipt" aria-label={`Print receipt ${transaction.receiptNumber}`}><Printer size={15}/></button>{!transaction.isVoided && <button type="button" className="is-danger" onClick={() => { setVoidTarget(transaction); setVoidReason('') }} title="Void order" aria-label={`Void order ${transaction.orderNumber}`}><Ban size={15}/></button>}</div></td>
           </tr>)}</tbody>
         </table>
         {!loading && !transactions.length && <div className="inv-empty"><ReceiptText size={26}/><h3>No transactions found</h3><p>Completed walk-in orders will appear here.</p></div>}

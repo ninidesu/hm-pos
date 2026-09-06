@@ -175,6 +175,18 @@ export async function saveStaffProfile(userId, values) {
   return data
 }
 
+export async function saveStaffUsername(userId, username) {
+  if (!isSupabaseConfigured) throw new Error('Supabase is not configured.')
+  const { data, error } = await supabase
+    .from('users')
+    .update({ username: username.trim(), updated_at: new Date().toISOString() })
+    .eq('id', userId)
+    .select('id,username,email')
+    .single()
+  if (error) throw error
+  return data
+}
+
 export async function changeStaffPassword(password) {
   if (!isSupabaseConfigured) throw new Error('Supabase is not configured.')
   if (!isValidInternalPassword(password)) throw new Error('Use 8–32 characters.')

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertTriangle, Archive, Bell, Box, CalendarDays, Check, Copy, Eye, Folder,
+  AlertTriangle, Archive, Bell, Box, Check, Copy, Eye, Folder,
   Grid, ImagePlus, List, MoreVertical, Pencil, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Tags, TrendingUp, X,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
@@ -522,28 +522,51 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
     imageUrl: item?.imageUrl || '', manualAvailable: item?.manualAvailable ?? true, isFeatured: item?.isFeatured ?? false, isBestseller: item?.isBestseller ?? false,
     prepTimeMinutes: item?.prepTimeMinutes ?? '', availableFrom: item?.availableFrom || '', availableUntil: item?.availableUntil || '', sortOrder: item?.sortOrder ?? 0,
   })
-  const [imagePreview, setImagePreview, clearImagePreview] = useManagementSessionState(`${draftScope}:image`, item?.image || '')
+  const [imagePreview, setImagePreview] = useState(item?.image || '')
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [section, setSection, clearSection] = useManagementSessionState(`${draftScope}:section`, 'basics')
   const fileRef = useRef(null)
+  const localPreviewRef = useRef('')
   const set = (key, value) => setValues((c) => ({ ...c, [key]: value }))
-  const close = () => { clearValues(); clearImagePreview(); clearSection(); onClose() }
+  const releaseLocalPreview = () => {
+    if (!localPreviewRef.current) return
+    URL.revokeObjectURL(localPreviewRef.current)
+    localPreviewRef.current = ''
+  }
+  const close = () => { releaseLocalPreview(); clearValues(); clearSection(); onClose() }
+
+  useEffect(() => {
+    setImagePreview(item?.image || '')
+    return releaseLocalPreview
+  }, [item?.id, item?.image])
+
+  useEffect(() => {
+    if (!['basics', 'options'].includes(section)) setSection('basics')
+  }, [section, setSection])
 
   const availableSubcategories = useMemo(() => subcategories.filter((s) => !s.is_archived && s.main_category_id === values.mainCategoryId), [subcategories, values.mainCategoryId])
 
   const handleFile = async (event) => {
     const file = event.target.files?.[0]
     if (!file) return
+    releaseLocalPreview()
+    const localPreview = URL.createObjectURL(file)
+    localPreviewRef.current = localPreview
+    setImagePreview(localPreview)
     setUploading(true); setError('')
     try {
       const url = await uploadMenuItemImage(file)
       set('imageUrl', url)
+      releaseLocalPreview()
       setImagePreview(url)
     } catch (cause) {
+      releaseLocalPreview()
+      setImagePreview(item?.image || '')
       setError(describeError(cause, 'Could not upload the image.'))
     } finally {
+      event.target.value = ''
       setUploading(false)
     }
   }
@@ -553,11 +576,10 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
     if (!values.name.trim()) { setSection('basics'); return setError('Item name is required.') }
     const price = Number(values.price)
     if (Number.isNaN(price) || price < 0) { setSection('basics'); return setError('Price must be zero or greater.') }
-    if (values.availableFrom && values.availableUntil && values.availableFrom > values.availableUntil) { setSection('scheduling'); return setError('Available-from date must be before the available-until date.') }
     setSaving(true); setError('')
     try {
       await onSave({ id: item?.id, ...values, price, prepTimeMinutes: values.prepTimeMinutes === '' ? null : Number(values.prepTimeMinutes) })
-      clearValues(); clearImagePreview(); clearSection()
+      releaseLocalPreview(); clearValues(); clearSection()
     } catch (cause) {
       if (cause?.code !== 'APPROVAL_CANCELLED') setError(describeError(cause, 'Could not save this item.'))
       setSaving(false)
@@ -577,7 +599,6 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
             <nav className="menu-editor-nav" role="tablist" aria-label="Item editor sections">
               <button type="button" role="tab" aria-selected={section === 'basics'} aria-controls="menu-editor-basics" className={section === 'basics' ? 'active' : ''} onClick={() => setSection('basics')}><ImagePlus size={18} /><span><b>Basics</b><small>Name, image, and category</small></span></button>
               <button type="button" role="tab" aria-selected={section === 'options'} aria-controls="menu-editor-options" className={section === 'options' ? 'active' : ''} onClick={() => setSection('options')}><SlidersHorizontal size={18} /><span><b>Options</b><small>Availability and choices</small></span></button>
-              <button type="button" role="tab" aria-selected={section === 'scheduling'} aria-controls="menu-editor-scheduling" className={section === 'scheduling' ? 'active' : ''} onClick={() => setSection('scheduling')}><CalendarDays size={18} /><span><b>Scheduling</b><small>Timing and display order</small></span></button>
             </nav>
             <div className="menu-editor-panel">
               {section === 'basics' && (
@@ -603,24 +624,12 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
                   <label className="field menu-temperature-field"><span>Temperature</span><select value={values.temperatureType} onChange={(e) => set('temperatureType', e.target.value)}><option value="none">Not applicable</option><option value="hot_only">Hot only</option><option value="iced_only">Iced only</option><option value="flexible">Hot or iced</option></select><small>This controls which temperature choices customers see.</small></label>
                   <fieldset className="menu-option-group"><legend>Menu status</legend><div className="menu-option-grid">
                     <label className="menu-option-card"><input type="checkbox" checked={values.manualAvailable} onChange={(e) => set('manualAvailable', e.target.checked)} /><span><b>Available</b><small>Customers can order this item.</small></span></label>
-                    <label className="menu-option-card"><input type="checkbox" checked={values.isFeatured} onChange={(e) => set('isFeatured', e.target.checked)} /><span><b>Featured</b><small>Give the item extra visibility.</small></span></label>
                     <label className="menu-option-card"><input type="checkbox" checked={values.isBestseller} onChange={(e) => set('isBestseller', e.target.checked)} /><span><b>Bestseller</b><small>Show the bestseller marker.</small></span></label>
                   </div></fieldset>
                   <fieldset className="menu-option-group"><legend>Customer customization</legend><div className="menu-option-grid">
                     <label className="menu-option-card"><input type="checkbox" checked={values.allowIce} onChange={(e) => set('allowIce', e.target.checked)} /><span><b>Ice levels</b><small>Let customers choose ice amount.</small></span></label>
                     <label className="menu-option-card"><input type="checkbox" checked={values.allowSugar} onChange={(e) => set('allowSugar', e.target.checked)} /><span><b>Sugar levels</b><small>Let customers adjust sweetness.</small></span></label>
-                    <label className="menu-option-card"><input type="checkbox" checked={values.allowAddons} onChange={(e) => set('allowAddons', e.target.checked)} /><span><b>Add-ons</b><small>Allow compatible extras.</small></span></label>
                   </div></fieldset>
-                </section>
-              )}
-              {section === 'scheduling' && (
-                <section id="menu-editor-scheduling" role="tabpanel" className="menu-form-section" aria-label="Item scheduling">
-                  <header><h3>Scheduling and order</h3><p>Control preparation guidance, menu position, and optional selling dates.</p></header>
-                  <div className="form-grid menu-form-grid">
-                    <label className="field"><span>Prep time (minutes)</span><input type="number" min="0" value={values.prepTimeMinutes} onChange={(e) => set('prepTimeMinutes', e.target.value)} placeholder="e.g. 10" /><small>Used by staff as preparation guidance.</small></label>
-                    <label className="field"><span>Display order</span><input type="number" value={values.sortOrder} onChange={(e) => set('sortOrder', e.target.value)} /><small>Lower numbers appear first.</small></label>
-                  </div>
-                  <div className="menu-schedule-card"><div><CalendarDays size={18} /><span><b>Optional selling window</b><small>Leave both dates empty to keep the item available year-round.</small></span></div><div className="form-grid menu-form-grid"><label className="field"><span>Available from</span><input type="date" value={values.availableFrom} onChange={(e) => set('availableFrom', e.target.value)} /></label><label className="field"><span>Available until</span><input type="date" value={values.availableUntil} onChange={(e) => set('availableUntil', e.target.value)} /></label></div></div>
                 </section>
               )}
             </div>
@@ -677,6 +686,11 @@ function CategoryManagerModal({ mainCategories, subcategories, isAdmin = false, 
   const activeSubcategories = subcategories.filter((category) => !category.is_archived)
   const visibleCategories = tab === 'main' ? activeMainCategories : activeSubcategories
   const changeTab = (nextTab) => { setTab(nextTab); setError(''); setName('') }
+
+  useEffect(() => {
+    if (tab !== 'sub' || activeMainCategories.length === 0) return
+    if (!activeMainCategories.some((category) => category.id === parentId)) setParentId(activeMainCategories[0].id)
+  }, [tab, parentId, activeMainCategories, setParentId])
 
   return (
     <div className="payment-modal-backdrop ops-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) close() }} onKeyDown={(e) => { if (e.key === 'Escape' && !saving) close() }}>

@@ -95,6 +95,56 @@ Deno.serve(async (request) => {
       return json({ success: true });
     }
 
+    if (action === "update") {
+      const userId = String(body?.userId || "");
+      const username = String(body?.username || "").trim();
+      const { data: target, error: targetError } = await admin.from("users")
+        .select("id,email,full_name,username,role").eq("id", userId).maybeSingle();
+      if (targetError || !target) return json({ success: false, error: "User account not found." }, 404);
+      const isCurrentAdmin = userId === caller.id;
+      const requestedEmail = body?.email == null ? "" : String(body.email).trim().toLowerCase();
+      const requestedPassword = body?.password == null ? "" : String(body.password);
+      const email = isCurrentAdmin ? target.email : requestedEmail;
+      const password = isCurrentAdmin ? "" : requestedPassword;
+      if (!userId || !validUsername(username) || (!isCurrentAdmin && !validEmail(email)) || (password && (password.length < 8 || password.length > 72))) {
+        return json({ success: false, error: "A valid username, email, and optional password are required." }, 400);
+      }
+
+      const { data: authTarget, error: authLookupError } = await admin.auth.admin.getUserById(userId);
+      if (authLookupError || !authTarget.user) throw authLookupError || new Error("Authentication account not found.");
+      const authChanges: { email?: string; user_metadata: Record<string, unknown>; password?: string } = {
+        user_metadata: { ...(authTarget.user.user_metadata || {}), username },
+      };
+      if (!isCurrentAdmin) authChanges.email = email;
+      if (password) authChanges.password = password;
+      const { error: authUpdateError } = await admin.auth.admin.updateUserById(userId, authChanges);
+      if (authUpdateError) throw authUpdateError;
+
+      const updatedAt = new Date().toISOString();
+      const profileChanges: { username: string; updated_at: string; email?: string } = { username, updated_at: updatedAt };
+      if (!isCurrentAdmin) profileChanges.email = email;
+      const { data: updated, error: profileError } = await admin.from("users")
+        .update(profileChanges).eq("id", userId)
+        .select("id,email,full_name,username,role").single();
+      if (profileError) throw profileError;
+
+      await admin.from("portal_audit_events").insert({
+        actor_id: caller.id,
+        actor_name_snapshot: caller.full_name || caller.username || caller.email,
+        actor_role_snapshot: "admin",
+        surface: "admin",
+        module: "users_access",
+        action: "user.credentials_updated",
+        entity_type: "profile",
+        entity_id: target.id,
+        entity_label: updated.full_name || updated.username || updated.email,
+        summary: `${caller.full_name || caller.email} updated ${updated.full_name || updated.email}`,
+        before_data: { email: target.email, username: target.username },
+        after_data: { email: updated.email, username: updated.username, password_changed: Boolean(password) },
+      });
+      return json({ success: true, user: updated });
+    }
+
     if (action === "remove") {
       const userId = String(body?.userId || "");
       if (!userId) return json({ success: false, error: "User account is required." }, 400);

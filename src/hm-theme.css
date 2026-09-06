@@ -100,6 +100,72 @@
   background: radial-gradient(circle, rgba(201, 169, 220, .18), transparent 70%);
 }
 
+/* Keep every admin destination reachable when the desktop sidebar collapses. */
+.internal-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 800px) {
+  .app-layout.legacy-admin .internal-mobile-nav {
+    position: sticky;
+    top: 0;
+    z-index: 45;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(116px, 1fr));
+    width: 100%;
+    overflow-x: auto;
+    padding: 8px 12px;
+    border-bottom: 1px solid #d9c7e6;
+    background: rgba(255, 255, 255, .97);
+    box-shadow: 0 8px 22px rgba(52, 20, 78, .09);
+    scrollbar-width: none;
+  }
+
+  .app-layout.legacy-admin .internal-mobile-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .app-layout.legacy-admin .internal-mobile-nav a {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 13px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: #675772;
+    font-size: .76rem;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+  }
+
+  .app-layout.legacy-admin .internal-mobile-nav a:hover {
+    background: #f6effa;
+    color: #542475;
+  }
+
+  .app-layout.legacy-admin .internal-mobile-nav a.active,
+  .app-layout.legacy-admin .internal-mobile-nav a[aria-current='page'] {
+    border-color: #542475;
+    background: #542475;
+    color: #fff;
+  }
+
+  .app-layout.legacy-admin .internal-mobile-nav a:focus-visible {
+    outline: 3px solid rgba(84, 36, 117, .28);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout.legacy-admin .internal-mobile-nav a {
+    transition: none;
+  }
+}
+
 .app-layout:is(.legacy-admin, .legacy-staff) .internal-brand h2 { color: #fff; }
 .app-layout:is(.legacy-admin, .legacy-staff) .internal-brand p,
 .app-layout:is(.legacy-admin, .legacy-staff) .internal-group-label { color: rgba(255, 255, 255, .62); }
@@ -551,6 +617,399 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
   background: var(--mgmt-primary);
   color: var(--mgmt-on-primary);
 }
+.app-layout.legacy-admin .menu-status-row .inv-tabs {
+  background: #fff;
+}
+
+/* Admin transaction history */
+.app-layout.legacy-admin .transactions-page {
+  display: grid;
+  gap: 18px;
+  width: 100%;
+  padding: 4px 0 36px;
+}
+
+.app-layout.legacy-admin .transactions-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 2px 0 4px;
+}
+
+.app-layout.legacy-admin .transactions-hero h2 {
+  margin: 5px 0 0;
+  color: var(--mgmt-heading);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  letter-spacing: -.035em;
+}
+
+.app-layout.legacy-admin .transactions-hero p {
+  margin: 7px 0 0;
+  color: var(--mgmt-muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.app-layout.legacy-admin .transactions-hero .eyebrow {
+  color: var(--mgmt-primary);
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.app-layout.legacy-admin .transactions-hero .ops-secondary-action {
+  flex: 0 0 auto;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border-color: #d7c5e3;
+  color: var(--mgmt-primary);
+}
+
+.app-layout.legacy-admin .transactions-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.app-layout.legacy-admin .txn-export-action {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid #d7c5e3;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--mgmt-primary);
+  font: inherit;
+  font-size: .76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color .18s ease, background-color .18s ease, color .18s ease;
+}
+
+.app-layout.legacy-admin .txn-export-action:hover:not(:disabled) {
+  border-color: var(--mgmt-primary);
+  background: #f4ecf8;
+}
+
+.app-layout.legacy-admin .txn-export-action--primary {
+  border-color: var(--mgmt-primary);
+  background: var(--mgmt-primary);
+  color: #fff;
+}
+
+.app-layout.legacy-admin .txn-export-action--primary:hover:not(:disabled) {
+  background: #421963;
+  color: #fff;
+}
+
+.app-layout.legacy-admin .txn-export-action:disabled {
+  cursor: not-allowed;
+  opacity: .5;
+}
+
+.app-layout.legacy-admin .txn-export-action:focus-visible {
+  outline: 3px solid rgba(84, 36, 117, .24);
+  outline-offset: 2px;
+}
+
+.app-layout.legacy-admin .transactions-page .txn-report-overview {
+  margin-bottom: 0;
+}
+
+.app-layout.legacy-admin .transactions-page .txn-report-stat svg {
+  background: #f0e8f6;
+  color: var(--mgmt-primary);
+}
+
+.app-layout.legacy-admin .txn-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.app-layout.legacy-admin .txn-summary-grid article {
+  min-width: 0;
+  min-height: 112px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 19px 21px;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 9px 24px rgba(52, 20, 78, .055);
+}
+
+.app-layout.legacy-admin .txn-summary-grid article:first-child {
+  border-color: var(--mgmt-primary);
+  background: var(--mgmt-primary);
+  color: #fff;
+}
+
+.app-layout.legacy-admin .txn-summary-grid span {
+  color: var(--mgmt-muted);
+  font-size: .69rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.app-layout.legacy-admin .txn-summary-grid b {
+  margin-top: 5px;
+  color: var(--mgmt-heading);
+  font-size: 1.45rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-layout.legacy-admin .txn-summary-grid small {
+  margin-top: 4px;
+  color: var(--mgmt-muted);
+  font-size: .7rem;
+}
+
+.app-layout.legacy-admin .txn-summary-grid article:first-child :is(span, b, small) {
+  color: #fff;
+}
+
+.app-layout.legacy-admin .txn-summary-grid article:first-child small {
+  opacity: .78;
+}
+
+.app-layout.legacy-admin .transaction-controls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) repeat(4, minmax(135px, auto));
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.app-layout.legacy-admin .transaction-controls > label:not(.transaction-search) {
+  display: grid;
+  gap: 6px;
+  color: var(--mgmt-muted);
+  font-size: .64rem;
+  font-weight: 800;
+}
+
+.app-layout.legacy-admin .transaction-search {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 13px;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--mgmt-muted);
+}
+
+.app-layout.legacy-admin .transaction-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--mgmt-text);
+  font: inherit;
+  font-size: .8rem;
+}
+
+.app-layout.legacy-admin .transaction-controls :is(select, input[type='date']) {
+  min-width: 0;
+  height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 9px;
+  outline: 0;
+  background: #fff;
+  color: var(--mgmt-text);
+  font: inherit;
+  font-size: .76rem;
+}
+
+.app-layout.legacy-admin .transaction-search:focus-within,
+.app-layout.legacy-admin .transaction-controls :is(select, input[type='date']):focus {
+  border-color: var(--mgmt-primary);
+  box-shadow: 0 0 0 3px rgba(84, 36, 117, .13);
+}
+
+.app-layout.legacy-admin .transaction-table-wrap {
+  position: relative;
+  min-height: 260px;
+  overflow-x: auto;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(52, 20, 78, .05);
+}
+
+.app-layout.legacy-admin .transaction-table {
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+  color: var(--mgmt-text);
+  font-size: .76rem;
+}
+
+.app-layout.legacy-admin .transaction-table th {
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--mgmt-border);
+  background: #faf8fc;
+  color: var(--mgmt-muted);
+  font-size: .61rem;
+  font-weight: 850;
+  letter-spacing: .055em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-layout.legacy-admin .transaction-table td {
+  padding: 14px 15px;
+  border-bottom: 1px solid var(--mgmt-border);
+  vertical-align: middle;
+}
+
+.app-layout.legacy-admin .transaction-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.app-layout.legacy-admin .transaction-table tbody tr {
+  transition: background-color .18s ease;
+}
+
+.app-layout.legacy-admin .transaction-table tbody tr:hover {
+  background: #fbf8fd;
+}
+
+.app-layout.legacy-admin .transaction-table td:first-child :is(b, small) {
+  display: block;
+  white-space: nowrap;
+}
+
+.app-layout.legacy-admin .transaction-table td:first-child b,
+.app-layout.legacy-admin .transaction-table td:nth-child(6) b {
+  color: var(--mgmt-heading);
+}
+
+.app-layout.legacy-admin .transaction-table td:first-child small {
+  margin-top: 3px;
+  color: var(--mgmt-muted);
+  font-size: .65rem;
+}
+
+.app-layout.legacy-admin .transaction-table .status-chip--completed {
+  border-color: #d7c5e3;
+  background: #f1e9f7;
+  color: #542475;
+}
+
+.app-layout.legacy-admin .transaction-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-layout.legacy-admin .transaction-row-actions button {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #d9c9e3;
+  border-radius: 9px;
+  background: #fff;
+  color: var(--mgmt-primary);
+  cursor: pointer;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.app-layout.legacy-admin .transaction-row-actions button:hover {
+  border-color: var(--mgmt-primary);
+  background: #f4ecf8;
+}
+
+.app-layout.legacy-admin .transaction-row-actions button.is-danger {
+  border-color: #efcece;
+  color: var(--mgmt-danger);
+}
+
+.app-layout.legacy-admin .transaction-row-actions button.is-danger:hover {
+  background: var(--mgmt-danger-soft);
+}
+
+.app-layout.legacy-admin .transaction-row-actions button:focus-visible {
+  outline: 3px solid rgba(84, 36, 117, .24);
+  outline-offset: 2px;
+}
+
+.app-layout.legacy-admin .transaction-loading {
+  min-height: 258px;
+  display: grid;
+  place-items: center;
+  color: var(--mgmt-muted);
+  font-size: .8rem;
+  font-weight: 750;
+}
+
+.app-layout.legacy-admin .transaction-table-wrap[aria-busy='true'] .transaction-table {
+  display: none;
+}
+
+@media (max-width: 1080px) {
+  .app-layout.legacy-admin .transaction-controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .app-layout.legacy-admin .transaction-search {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-layout.legacy-admin .transactions-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .app-layout.legacy-admin .transactions-hero .ops-secondary-action {
+    width: 100%;
+  }
+
+  .app-layout.legacy-admin .transactions-hero-actions,
+  .app-layout.legacy-admin .txn-export-action {
+    width: 100%;
+  }
+
+  .app-layout.legacy-admin .txn-summary-grid,
+  .app-layout.legacy-admin .transaction-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .app-layout.legacy-admin .transaction-search {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout.legacy-admin .transaction-table tbody tr,
+  .app-layout.legacy-admin .transaction-row-actions button {
+    transition: none;
+  }
+}
 .app-layout.legacy-admin .menu-bulk-bar {
   border-color: #d9c6e5;
   background: #f0e8f6;
@@ -594,6 +1053,7 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
 }
 
 /* Simple settings overview */
+.settings-stack { display: grid; gap: 18px; }
 .app-layout.legacy-admin .simple-settings {
   width: 100%;
   overflow: hidden;
@@ -622,6 +1082,39 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
 }
 .simple-settings-header h2 { margin: 0; color: var(--mgmt-heading); font-size: 1.05rem; }
 .simple-settings-header p { margin: 4px 0 0; color: var(--mgmt-muted); font-size: .78rem; }
+.simple-account-form { background: var(--mgmt-surface); }
+.simple-account-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 20px 22px;
+}
+.simple-account-locked input {
+  cursor: not-allowed;
+  background: var(--mgmt-subtle);
+  color: var(--mgmt-muted);
+}
+.simple-account-locked em {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--mgmt-muted);
+  font-size: .62rem;
+  font-style: normal;
+  font-weight: 750;
+}
+.simple-account-notice {
+  margin: 0 22px 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--mgmt-border);
+  border-radius: 11px;
+  background: var(--mgmt-subtle);
+  color: var(--mgmt-heading);
+  font-size: .72rem;
+  font-weight: 750;
+}
+.simple-account-notice.is-error { border-color: color-mix(in srgb, var(--mgmt-danger) 32%, var(--mgmt-border)); background: var(--mgmt-danger-soft); color: var(--mgmt-danger); }
+.simple-account-actions { display: flex; justify-content: flex-end; padding: 14px 22px; border-top: 1px solid var(--mgmt-border); }
 .simple-settings-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -659,6 +1152,9 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
 .simple-settings-links a:hover { border-color: #c9a9dc; background: var(--mgmt-hover); }
 .simple-settings-links a:focus-visible { outline: 3px solid rgba(84, 36, 117, .25); outline-offset: 2px; }
 @media (max-width: 680px) {
+  .simple-account-fields { grid-template-columns: 1fr; padding: 18px; }
+  .simple-account-actions { padding: 14px 18px; }
+  .simple-account-actions button { width: 100%; }
   .simple-settings-list { grid-template-columns: 1fr; }
 }
 
