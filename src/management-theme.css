@@ -1227,3 +1227,46 @@ html[data-staff-motion="reduce"] .app-layout.legacy-admin .cancel-animated-path,
 .app-layout.legacy-admin :is(.stock-table, .stock-table thead, .stock-table tbody, .stock-table tr, .stock-table th, .stock-table td) {
   background: #fff;
 }
+
+/* Keep the dashboard's lower summaries in the document flow across browsers. */
+.app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-analytics-row--overview,
+.app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-secondary-grid {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-analytics-row--overview {
+  min-height: 294px;
+  display: grid !important;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-secondary-grid {
+  min-height: 190px;
+  display: grid !important;
+}
+
+.app-layout.legacy-admin .ad-dashboard-v2 > :is(.ad-dashboard-analytics-row--overview, .ad-dashboard-secondary-grid) > .ad-panel {
+  display: block !important;
+  min-width: 0;
+  visibility: visible !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+@media (max-width: 1100px) {
+  .app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-analytics-row--overview,
+  .app-layout.legacy-admin .ad-dashboard-v2 > .ad-dashboard-secondary-grid {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-layout.legacy-admin .ad-dashboard-v2 .ad-reference-kpis,
+  .app-layout.legacy-admin .ad-dashboard-v2 .ad-dashboard-secondary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
