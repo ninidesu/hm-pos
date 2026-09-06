@@ -78,19 +78,6 @@ const microItemVariants = {
     transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] },
   },
 }
-const simpleDashboardPanelVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: [0.16, 1, 0.3, 1],
-      delayChildren: 0.1,
-      staggerChildren: 0.055,
-    },
-  },
-}
 const transactionRowsVariants = {
   hidden: {},
   visible: { transition: { delayChildren: 0.12, staggerChildren: 0.055 } },
@@ -301,25 +288,25 @@ function DashboardContent({ metrics }) {
       </motion.div>
     </motion.section>
 
-    <motion.section className="ad-dashboard-analytics-row ad-dashboard-analytics-row--overview" aria-label="Sales overview and recent transactions" variants={itemVariants}>
-      <Panel title="Sales overview" detail="Completed walk-in sales" action={<Link to="/admin/transactions">View transactions <ArrowRight size={15} /></Link>} className="ad-v2-sales-panel">
+    <section className="ad-dashboard-analytics-row ad-dashboard-analytics-row--overview" aria-label="Sales overview and recent transactions">
+      <Panel title="Sales overview" detail="Completed walk-in sales" action={<Link to="/admin/transactions">View transactions <ArrowRight size={15} /></Link>} className="ad-v2-sales-panel" motionVariants={null}>
         <SalesLineChart points={metrics.salesTrend} comparison={metrics.salesChangePct} />
       </Panel>
       <RecentTransactions orders={metrics.recentOrders} />
-    </motion.section>
+    </section>
 
-    <motion.section className="ad-dashboard-secondary-grid" aria-label="Additional dashboard summaries" variants={itemVariants}>
+    <section className="ad-dashboard-secondary-grid" aria-label="Additional dashboard summaries">
       <LowStockAlerts items={metrics.lowStockItems} />
-      <Panel title="Top selling items" detail="Last 14 days" action={<Link to="/admin/transactions">View sales <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-rail-sellers">
+      <Panel title="Top selling items" detail="Last 14 days" action={<Link to="/admin/transactions">View sales <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-rail-sellers" motionVariants={null}>
         <RankedProducts products={metrics.bestSellers} />
       </Panel>
-    </motion.section>
+    </section>
   </motion.div>
   </MotionConfig>
 }
 
 function LowStockAlerts({ items }) {
-  return <Panel title="Low-stock alerts" detail="Inventory below its alert level" action={<Link to="/admin/inventory">View all <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-low-stock-panel">
+  return <Panel title="Low-stock alerts" detail="Inventory below its alert level" action={<Link to="/admin/inventory">View all <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-low-stock-panel" motionVariants={null}>
     <motion.div className="ad-low-stock-list" variants={microContainerVariants}>{items.slice(0, 3).map((item) => {
       const out = item.quantity <= 0
       return <MotionLink to="/admin/inventory" key={item.id} variants={microItemVariants}><span className={out ? 'is-out' : ''}><PackageX size={16} /></span><div><b>{item.name}</b><small>{item.quantity} {item.unit} left</small></div><em className={out ? 'is-out' : ''}>{out ? 'Out' : 'Low'}</em></MotionLink>
@@ -328,7 +315,7 @@ function LowStockAlerts({ items }) {
 }
 
 function RecentTransactions({ orders }) {
-  return <Panel title="Recent Transactions" detail="Latest walk-in sales" action={<Link to="/admin/transactions">View all transactions <ArrowRight size={15} /></Link>} className="ad-transactions-panel" motionVariants={simpleDashboardPanelVariants}>
+  return <Panel title="Recent Transactions" detail="Latest walk-in sales" action={<Link to="/admin/transactions">View all transactions <ArrowRight size={15} /></Link>} className="ad-transactions-panel" motionVariants={null}>
     <div className="ad-transactions-scroll">
       <table className="ad-transactions-table">
         <thead><tr><th>Transaction</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Time</th><th><span className="sr-only">Actions</span></th></tr></thead>

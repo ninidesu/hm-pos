@@ -1399,3 +1399,139 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
   .app-layout.legacy-admin .ua-stat-rail > div { border-right: 0; border-bottom: 1px solid var(--mgmt-border); }
   .app-layout.legacy-admin .ua-stat-rail > div:last-child { border-bottom: 0; }
 }
+
+/* Mobile management navigation drawer and compact header alignment. */
+.internal-menu-toggle,
+.internal-drawer-close,
+.internal-drawer-scrim { display: none; }
+
+.app-layout.legacy-admin .internal-sidebar nav a { gap: 12px; }
+.app-layout.legacy-admin .internal-sidebar nav a > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  stroke-width: 2;
+}
+
+@media (max-width: 800px) {
+  body.management-drawer-open { overflow: hidden; }
+  .app-layout.legacy-admin { display: block; min-height: 100dvh; }
+  .app-layout.legacy-admin .internal-mobile-nav { display: none; }
+  .app-layout.legacy-admin .internal-sidebar {
+    position: fixed;
+    z-index: 100;
+    inset: 0 auto 0 0;
+    width: min(320px, 86vw);
+    height: 100dvh;
+    display: flex;
+    padding: max(22px, env(safe-area-inset-top)) 18px max(20px, env(safe-area-inset-bottom));
+    overflow: hidden;
+    visibility: hidden;
+    box-shadow: 20px 0 55px rgba(33, 0, 52, .28);
+    transform: translateX(-104%);
+    transition: transform .24s cubic-bezier(.2, .8, .2, 1), visibility 0s linear .24s;
+  }
+  .app-layout.legacy-admin.is-mobile-menu-open .internal-sidebar {
+    visibility: visible;
+    transform: translateX(0);
+    transition-delay: 0s;
+  }
+  .app-layout.legacy-admin .internal-sidebar .internal-brand {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) 44px;
+    gap: 11px;
+  }
+  .app-layout.legacy-admin .internal-sidebar nav {
+    min-height: 0;
+    padding: 4px 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .app-layout.legacy-admin .internal-sidebar nav a {
+    min-height: 48px;
+    border-radius: 13px;
+  }
+  .internal-drawer-close {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .10);
+    color: #fff;
+    cursor: pointer;
+  }
+  .internal-drawer-scrim {
+    position: fixed;
+    z-index: 90;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgba(20, 7, 29, .54);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .18s ease, visibility 0s linear .18s;
+  }
+  .app-layout.legacy-admin.is-mobile-menu-open .internal-drawer-scrim {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+  .app-layout.legacy-admin .internal-main {
+    width: 100%;
+    padding: 18px 14px 36px;
+  }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .internal-menu-toggle {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    align-self: start;
+    border: 1px solid var(--mgmt-border-strong);
+    border-radius: 12px;
+    background: var(--mgmt-surface);
+    color: var(--mgmt-primary);
+    box-shadow: 0 6px 16px rgba(33, 0, 52, .08);
+    cursor: pointer;
+  }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header > div:nth-child(2) { min-width: 0; }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header .header-actions {
+    min-width: 0;
+    justify-self: end;
+  }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header .internal-utility-bar { gap: 6px; }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header .internal-live-datetime { display: none; }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header .internal-utility-button {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+  }
+  .internal-menu-toggle:focus-visible,
+  .internal-drawer-close:focus-visible,
+  .internal-drawer-scrim:focus-visible {
+    outline: 3px solid rgba(216, 183, 232, .68);
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header h1 {
+    overflow: hidden;
+    font-size: 1.32rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .app-layout.legacy-admin .internal-page-header.is-admin-surface-header .ad-live-state { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-layout.legacy-admin .internal-sidebar,
+  .app-layout.legacy-admin .internal-drawer-scrim { transition: none; }
+}
