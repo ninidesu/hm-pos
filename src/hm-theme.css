@@ -257,6 +257,22 @@
   box-shadow: 0 5px 14px rgba(45, 10, 78, .2);
 }
 
+.app-layout.legacy-admin .menu-manage-chip--subcategory {
+  border-style: dashed;
+  background: var(--mgmt-subtle);
+}
+.app-layout.legacy-admin .menu-manage-chip--subcategory::before {
+  content: 'Sub';
+  color: var(--mgmt-faint);
+  font-size: .56rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.app-layout.legacy-admin .menu-manage-chip--subcategory.active::before {
+  color: rgba(255, 255, 255, .72);
+}
+
 .app-layout.legacy-admin .menu-manage-chip:focus-visible,
 .app-layout.legacy-admin .menu-manage-search-clear:focus-visible,
 .app-layout.legacy-admin .menu-view-toggle button:focus-visible {

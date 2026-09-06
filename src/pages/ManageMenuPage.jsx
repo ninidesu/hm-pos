@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AlertTriangle, Archive, Bell, Box, CalendarDays, Check, Copy, Eye, ExternalLink, Folder,
+  AlertTriangle, Archive, Bell, Box, CalendarDays, Check, Copy, Eye, Folder,
   Grid, ImagePlus, List, MoreVertical, Pencil, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Tags, TrendingUp, X,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
@@ -48,6 +48,7 @@ export default function ManageMenuPage({ role = 'staff' }) {
   const [toasts, setToasts] = useState([])
 
   const [tab, setTab] = useManagementSessionState(`${storagePrefix}:menu:tab`, 'all')
+  const [mainCategoryFilter, setMainCategoryFilter] = useManagementSessionState(`${storagePrefix}:menu:main-category-filter`, 'all')
   const [subcategoryFilter, setSubcategoryFilter] = useManagementSessionState(`${storagePrefix}:menu:subcategory-filter`, 'all')
   const [search, setSearch] = useManagementSessionState(`${storagePrefix}:menu:search`, '')
   const [minPrice, setMinPrice] = useManagementSessionState(`${storagePrefix}:menu:min-price`, '')
@@ -107,10 +108,8 @@ export default function ManageMenuPage({ role = 'staff' }) {
 
   const requestApproval = (_target, operation) => typeof operation === 'function' ? operation() : Promise.resolve(null)
 
-  const activeSubcategories = useMemo(() => {
-    const usedIds = new Set(items.filter((i) => !i.isArchived).map((i) => i.subcategoryId))
-    return subcategories.filter((s) => !s.is_archived && usedIds.has(s.id))
-  }, [subcategories, items])
+  const activeMainCategories = useMemo(() => mainCategories.filter((category) => !category.is_archived), [mainCategories])
+  const activeSubcategories = useMemo(() => subcategories.filter((subcategory) => !subcategory.is_archived), [subcategories])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -121,13 +120,14 @@ export default function ManageMenuPage({ role = 'staff' }) {
       if (tab !== 'archived' && item.isArchived) return false
       if (tab === 'available' && !item.available) return false
       if (tab === 'unavailable' && item.available) return false
+      if (mainCategoryFilter !== 'all' && item.mainCategoryId !== mainCategoryFilter) return false
       if (subcategoryFilter !== 'all' && item.subcategoryId !== subcategoryFilter) return false
       if (q && !item.name.toLowerCase().includes(q) && !item.description.toLowerCase().includes(q)) return false
       if (min !== null && item.price < min) return false
       if (max !== null && item.price > max) return false
       return true
     })
-  }, [items, tab, subcategoryFilter, search, minPrice, maxPrice])
+  }, [items, tab, mainCategoryFilter, subcategoryFilter, search, minPrice, maxPrice])
 
   const sorted = useMemo(() => {
     const list = [...filtered]
@@ -291,10 +291,13 @@ export default function ManageMenuPage({ role = 'staff' }) {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search drinks, cakes, and meals..." />
           {search && <button type="button" className="menu-manage-search-clear" aria-label="Clear search" onClick={() => setSearch('')}><X size={14} /></button>}
         </label>
-        <div className="menu-manage-chip-row" aria-label="Menu categories">
-          <button type="button" aria-pressed={subcategoryFilter === 'all'} className={`menu-manage-chip ${subcategoryFilter === 'all' ? 'active' : ''}`} onClick={() => setSubcategoryFilter('all')}>All</button>
+        <div className="menu-manage-chip-row" aria-label="Menu categories and subcategories">
+          <button type="button" aria-pressed={mainCategoryFilter === 'all' && subcategoryFilter === 'all'} className={`menu-manage-chip ${mainCategoryFilter === 'all' && subcategoryFilter === 'all' ? 'active' : ''}`} onClick={() => { setMainCategoryFilter('all'); setSubcategoryFilter('all') }}>All</button>
+          {activeMainCategories.map((category) => (
+            <button type="button" key={category.id} aria-pressed={mainCategoryFilter === category.id && subcategoryFilter === 'all'} className={`menu-manage-chip ${mainCategoryFilter === category.id && subcategoryFilter === 'all' ? 'active' : ''}`} onClick={() => { setMainCategoryFilter(category.id); setSubcategoryFilter('all') }}>{category.display_name || category.name}</button>
+          ))}
           {activeSubcategories.map((s) => (
-            <button type="button" key={s.id} aria-pressed={subcategoryFilter === s.id} className={`menu-manage-chip ${subcategoryFilter === s.id ? 'active' : ''}`} onClick={() => setSubcategoryFilter(s.id)}>{s.display_name || s.name}</button>
+            <button type="button" key={s.id} aria-pressed={subcategoryFilter === s.id} className={`menu-manage-chip menu-manage-chip--subcategory ${subcategoryFilter === s.id ? 'active' : ''}`} title={`Subcategory: ${s.display_name || s.name}`} onClick={() => { setMainCategoryFilter(s.main_category_id || 'all'); setSubcategoryFilter(s.id) }}>{s.display_name || s.name}</button>
           ))}
         </div>
       </div>
@@ -324,7 +327,6 @@ export default function ManageMenuPage({ role = 'staff' }) {
             <button type="button" className={view === 'grid' ? 'active' : ''} aria-label="Grid view" aria-pressed={view === 'grid'} onClick={() => setView('grid')}><Grid size={16} /></button>
             <button type="button" className={view === 'list' ? 'active' : ''} aria-label="List view" aria-pressed={view === 'list'} onClick={() => setView('list')}><List size={16} /></button>
           </div>
-          <a className="ops-secondary-action compact menu-preview-link" href="/menu" target="_blank" rel="noreferrer"><ExternalLink size={15} /> Preview as Customer</a>
         </div>
       </div>
 
@@ -639,19 +641,19 @@ function CategoryManagerModal({ mainCategories, subcategories, isAdmin = false, 
   const categoryPrefix = isAdmin ? 'admin' : 'staff'
   const [tab, setTab, clearTab] = useManagementSessionState(`${categoryPrefix}:menu:category-draft:tab`, 'main')
   const [name, setName, clearName] = useManagementSessionState(`${categoryPrefix}:menu:category-draft:name`, '')
-  const [displayName, setDisplayName, clearDisplayName] = useManagementSessionState(`${categoryPrefix}:menu:category-draft:display-name`, '')
   const [parentId, setParentId, clearParentId] = useManagementSessionState(`${categoryPrefix}:menu:category-draft:parent`, mainCategories.find((category) => !category.is_archived)?.id || '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const close = () => { clearTab(); clearName(); clearDisplayName(); clearParentId(); onClose() }
+  const close = () => { clearTab(); clearName(); clearParentId(); onClose() }
 
   const addMain = async (event) => {
     event.preventDefault()
     if (!name.trim()) return setError('Name is required.')
     setSaving(true); setError('')
     try {
-      await requestApproval({ action: 'add', itemName: displayName || name, summary: 'Add a main menu category', changeTypes: ['New category'], operationKey: 'upsert_main_category', payload: { name, displayName } }, () => upsertMainCategory({ name, displayName }))
-      setName(''); setDisplayName('')
+      await requestApproval({ action: 'add', itemName: name, summary: 'Add a main menu category', changeTypes: ['New category'], operationKey: 'upsert_main_category', payload: { name, displayName: name } }, () => upsertMainCategory({ name, displayName: name }))
+      setName('')
+      await onChanged()
       pushToast('success', isAdmin ? 'Category saved.' : 'Category sent for admin review.')
     } catch (cause) { if (cause?.code !== 'APPROVAL_CANCELLED') setError(describeError(cause, 'Could not save category.')) } finally { setSaving(false) }
   }
@@ -660,20 +662,21 @@ function CategoryManagerModal({ mainCategories, subcategories, isAdmin = false, 
     if (!name.trim()) return setError('Name is required.')
     setSaving(true); setError('')
     try {
-      await requestApproval({ action: 'add', itemName: displayName || name, summary: 'Add a menu subcategory', changeTypes: ['New category'], operationKey: 'upsert_subcategory', payload: { name, displayName, mainCategoryId: parentId || null } }, () => upsertSubcategory({ name, displayName, mainCategoryId: parentId || null }))
-      setName(''); setDisplayName('')
+      await requestApproval({ action: 'add', itemName: name, summary: 'Add a menu subcategory', changeTypes: ['New category'], operationKey: 'upsert_subcategory', payload: { name, displayName: name, mainCategoryId: parentId || null } }, () => upsertSubcategory({ name, displayName: name, mainCategoryId: parentId || null }))
+      setName('')
+      await onChanged()
       pushToast('success', isAdmin ? 'Subcategory saved.' : 'Subcategory sent for admin review.')
     } catch (cause) { if (cause?.code !== 'APPROVAL_CANCELLED') setError(describeError(cause, 'Could not save subcategory.')) } finally { setSaving(false) }
   }
   const archive = async (fn, id, label) => {
-    try { const operationKey = fn === archiveMainCategory ? 'archive_main_category' : 'archive_subcategory'; await requestApproval({ action: 'remove', itemName: label, summary: 'Archive this menu category', changeTypes: ['Item removal'], operationKey, payload: { id } }, () => fn(id)); pushToast('success', isAdmin ? `${label} was archived.` : `${label} removal sent for admin review.`) }
+    try { const operationKey = fn === archiveMainCategory ? 'archive_main_category' : 'archive_subcategory'; await requestApproval({ action: 'remove', itemName: label, summary: 'Archive this menu category', changeTypes: ['Item removal'], operationKey, payload: { id } }, () => fn(id)); await onChanged(); pushToast('success', isAdmin ? `${label} was archived.` : `${label} removal sent for admin review.`) }
     catch (cause) { pushToast('error', describeError(cause, `Could not archive ${label.toLowerCase()}.`)) }
   }
 
   const activeMainCategories = mainCategories.filter((category) => !category.is_archived)
   const activeSubcategories = subcategories.filter((category) => !category.is_archived)
   const visibleCategories = tab === 'main' ? activeMainCategories : activeSubcategories
-  const changeTab = (nextTab) => { setTab(nextTab); setError(''); setName(''); setDisplayName('') }
+  const changeTab = (nextTab) => { setTab(nextTab); setError(''); setName('') }
 
   return (
     <div className="payment-modal-backdrop ops-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !saving) close() }} onKeyDown={(e) => { if (e.key === 'Escape' && !saving) close() }}>
@@ -712,8 +715,7 @@ function CategoryManagerModal({ mainCategories, subcategories, isAdmin = false, 
             <header><span><Plus size={18} /></span><div><h3>Add {tab === 'main' ? 'a main category' : 'a subcategory'}</h3><p>{tab === 'main' ? 'Create a broad menu group such as Drinks or Foods.' : 'Create a focused group such as Espresso or Cakes.'}</p></div></header>
             <form onSubmit={tab === 'main' ? addMain : addSub}>
               {tab === 'sub' && <label className="field"><span>Parent category</span><select value={parentId} onChange={(e) => setParentId(e.target.value)} required>{activeMainCategories.map((category) => <option key={category.id} value={category.id}>{category.display_name || category.name}</option>)}</select><small>Where this subcategory will appear.</small></label>}
-                  <label className="field"><span>Internal name</span><input autoFocus value={name} maxLength={40} onChange={(e) => setName(sanitizeCatalogText(e.target.value, 40))} placeholder={tab === 'main' ? 'e.g. drinks' : 'e.g. espresso'} required /><small>Use a short, unique system name.</small></label>
-                  <label className="field"><span>Customer-facing name</span><input value={displayName} maxLength={60} onChange={(e) => setDisplayName(sanitizeCatalogText(e.target.value, 60))} placeholder={tab === 'main' ? 'e.g. Drinks' : 'e.g. Espresso'} /><small>Optional. Falls back to the internal name.</small></label>
+                  <label className="field"><span>Name</span><input autoFocus value={name} maxLength={40} onChange={(e) => setName(sanitizeCatalogText(e.target.value, 40))} placeholder={tab === 'main' ? 'e.g. Drinks' : 'e.g. Espresso'} required /><small>Use a short, unique category name.</small></label>
               {error && <p className="form-error" role="alert">{error}</p>}
               <button className="primary-button category-add-button" type="submit" disabled={saving || (tab === 'sub' && activeMainCategories.length === 0)}>{saving ? 'Saving…' : `Add ${tab === 'main' ? 'category' : 'subcategory'}`}</button>
             </form>
