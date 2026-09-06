@@ -3,7 +3,7 @@ import {
   Coffee, PackageCheck, PackageX, ReceiptText, RefreshCw,
   ShoppingBag, Store, TrendingDown, TrendingUp, WalletCards,
 } from 'lucide-react'
-import { animate, motion, MotionConfig, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from 'framer-motion'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import AppShell from '../components/AppShell'
@@ -31,36 +31,9 @@ const adminPageTitles = {
 
 const paymentLabels = { gcash: 'GCash', bank_transfer: 'Bank transfer', cod: 'Cash / COD', cash: 'Cash', other: 'Other' }
 const defaultSalesRangeDays = 14
-const cardPopDuration = 0.45
 const numberCountDuration = 3
 const kpiGraphDuration = 4
 const salesGraphDuration = kpiGraphDuration
-const containerVariants = {
-  hidden: { opacity: 1 },
-  visible: {
-    opacity: 1,
-    transition: {
-      delayChildren: 0,
-      staggerChildren: 0.04,
-    },
-  },
-}
-const itemVariants = {
-  hidden: { opacity: 1, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
-  },
-}
-const cardItemVariants = {
-  hidden: { opacity: 1, y: 8 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: cardPopDuration, ease: [0.16, 1, 0.3, 1] },
-  },
-}
 const microContainerVariants = {
   hidden: {},
   visible: {
@@ -260,9 +233,8 @@ function DashboardContent({ metrics }) {
     { label: 'Inventory', detail: 'Check inventory levels', icon: PackageCheck, to: '/admin/inventory' },
   ]
 
-  return <MotionConfig reducedMotion="user">
-  <motion.div className="ad-dashboard ad-dashboard-v2 dash-fade-in" variants={containerVariants} initial="hidden" animate="visible">
-    <motion.section className="ad-welcome-section" aria-labelledby="welcome-heading" variants={itemVariants}>
+  return <div className="ad-dashboard ad-dashboard-v2 dash-fade-in">
+    <section className="ad-welcome-section" aria-labelledby="welcome-heading">
       <div className="ad-welcome-card">
         <span className="ad-welcome-icon" aria-hidden="true"><Store size={28} /></span>
         <div className="ad-welcome-copy">
@@ -277,19 +249,19 @@ function DashboardContent({ metrics }) {
           </MotionLink>)}
         </motion.nav>
       </div>
-    </motion.section>
+    </section>
 
-    <motion.section className="ad-kpi-section" aria-labelledby="today-heading" variants={itemVariants}>
+    <section className="ad-kpi-section" aria-labelledby="today-heading">
       <h2 className="sr-only" id="today-heading">Today's overview</h2>
-      <motion.div className="ad-kpi-grid ad-reference-kpis" variants={microContainerVariants}>
+      <div className="ad-kpi-grid ad-reference-kpis">
         <KpiCard icon={CircleDollarSign} label="Net sales" value={metrics.totalSales} valueFormat={money} comparison={metrics.salesChangePct} detail="vs yesterday" tone="purple" trend={metrics.salesTrend} trendLabel="Net sales trend for the last 14 days" />
         <KpiCard icon={ShoppingBag} label="Orders" value={metrics.totalOrders} valueFormat={formatCount} detail={`${metrics.completedOrders} completed`} tone="cream" trend={metrics.ordersTrend} trendLabel="Orders trend for the last 14 days" />
         <KpiCard icon={WalletCards} label="Average order" value={metrics.avgOrderValue} valueFormat={money} detail="Paid completed orders" tone="blue" trend={metrics.averageOrderTrend} trendLabel="Average order trend for the last 14 days" />
-      </motion.div>
-    </motion.section>
+      </div>
+    </section>
 
     <section className="ad-dashboard-analytics-row ad-dashboard-analytics-row--overview" aria-label="Sales overview and recent transactions">
-      <Panel title="Sales overview" detail="Completed walk-in sales" action={<Link to="/admin/transactions">View transactions <ArrowRight size={15} /></Link>} className="ad-v2-sales-panel" motionVariants={null}>
+      <Panel title="Sales overview" detail="Completed walk-in sales" action={<Link to="/admin/transactions">View transactions <ArrowRight size={15} /></Link>} className="ad-v2-sales-panel">
         <SalesLineChart points={metrics.salesTrend} comparison={metrics.salesChangePct} />
       </Panel>
       <RecentTransactions orders={metrics.recentOrders} />
@@ -297,16 +269,15 @@ function DashboardContent({ metrics }) {
 
     <section className="ad-dashboard-secondary-grid" aria-label="Additional dashboard summaries">
       <LowStockAlerts items={metrics.lowStockItems} />
-      <Panel title="Top selling items" detail="Last 14 days" action={<Link to="/admin/transactions">View sales <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-rail-sellers" motionVariants={null}>
+      <Panel title="Top selling items" detail="Last 14 days" action={<Link to="/admin/transactions">View sales <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-rail-sellers">
         <RankedProducts products={metrics.bestSellers} />
       </Panel>
     </section>
-  </motion.div>
-  </MotionConfig>
+  </div>
 }
 
 function LowStockAlerts({ items }) {
-  return <Panel title="Low-stock alerts" detail="Inventory below its alert level" action={<Link to="/admin/inventory">View all <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-low-stock-panel" motionVariants={null}>
+  return <Panel title="Low-stock alerts" detail="Inventory below its alert level" action={<Link to="/admin/inventory">View all <ArrowRight size={14} /></Link>} className="ad-rail-panel ad-low-stock-panel">
     <motion.div className="ad-low-stock-list" variants={microContainerVariants}>{items.slice(0, 3).map((item) => {
       const out = item.quantity <= 0
       return <MotionLink to="/admin/inventory" key={item.id} variants={microItemVariants}><span className={out ? 'is-out' : ''}><PackageX size={16} /></span><div><b>{item.name}</b><small>{item.quantity} {item.unit} left</small></div><em className={out ? 'is-out' : ''}>{out ? 'Out' : 'Low'}</em></MotionLink>
@@ -315,7 +286,7 @@ function LowStockAlerts({ items }) {
 }
 
 function RecentTransactions({ orders }) {
-  return <Panel title="Recent Transactions" detail="Latest walk-in sales" action={<Link to="/admin/transactions">View all transactions <ArrowRight size={15} /></Link>} className="ad-transactions-panel" motionVariants={null}>
+  return <Panel title="Recent Transactions" detail="Latest walk-in sales" action={<Link to="/admin/transactions">View all transactions <ArrowRight size={15} /></Link>} className="ad-transactions-panel">
     <div className="ad-transactions-scroll">
       <table className="ad-transactions-table">
         <thead><tr><th>Transaction</th><th>Items</th><th>Payment</th><th>Total</th><th>Status</th><th>Time</th><th><span className="sr-only">Actions</span></th></tr></thead>
@@ -339,15 +310,13 @@ function RecentTransactions({ orders }) {
   </Panel>
 }
 
-function Panel({ title, detail, action, className = '', motionVariants = cardItemVariants, children }) {
-  const PanelElement = motionVariants ? motion.article : 'article'
-  const motionProps = motionVariants ? { variants: motionVariants } : {}
-  return <PanelElement className={`ad-panel ${className}`} {...motionProps}><header><div><h2>{title}</h2><p>{detail}</p></div>{action}</header><div className="ad-panel-body">{children}</div></PanelElement>
+function Panel({ title, detail, action, className = '', children }) {
+  return <article className={`ad-panel ${className}`}><header><div><h2>{title}</h2><p>{detail}</p></div>{action}</header><div className="ad-panel-body">{children}</div></article>
 }
 
 function KpiCard({ icon: Icon, label, value, valueFormat = formatCount, comparison, detail, tone, trend, trendLabel }) {
   const up = comparison >= 0
-  return <motion.article className={`ad-kpi-card is-${tone}`} variants={cardItemVariants}><div className="ad-kpi-top"><span><Icon size={19} /></span><small>{label}</small></div><strong><AnimatedMetric value={value} format={valueFormat} duration={numberCountDuration} /></strong><footer>{comparison !== undefined && <span className={up ? 'is-up' : 'is-down'}>{up ? <TrendingUp size={14} /> : <TrendingDown size={14} />}{percentage(comparison)}</span>}<small>{detail}</small></footer>{trend?.length > 1 && <MiniTrend values={trend.map((point) => point.total)} tone={tone} label={trendLabel || `${label} trend`} />}</motion.article>
+  return <article className={`ad-kpi-card is-${tone}`}><div className="ad-kpi-top"><span><Icon size={19} /></span><small>{label}</small></div><strong><AnimatedMetric value={value} format={valueFormat} duration={numberCountDuration} /></strong><footer>{comparison !== undefined && <span className={up ? 'is-up' : 'is-down'}>{up ? <TrendingUp size={14} /> : <TrendingDown size={14} />}{percentage(comparison)}</span>}<small>{detail}</small></footer>{trend?.length > 1 && <MiniTrend values={trend.map((point) => point.total)} tone={tone} label={trendLabel || `${label} trend`} />}</article>
 }
 
 function AnimatedMetric({ value, format = formatCount, duration = 0.7 }) {
