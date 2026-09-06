@@ -662,6 +662,39 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
   .simple-settings-list { grid-template-columns: 1fr; }
 }
 
+/* Admin modal actions and category counters must remain on the purple palette. */
+.app-layout.legacy-admin :is(.payment-modal, .stock-modal, .ua-modal, .ua-drawer, .menu-workspace-modal, .category-workspace-modal) :is(.primary-button, .ops-main-action, .ua-primary-action) {
+  border-color: #542475 !important;
+  background: linear-gradient(135deg, #6b368f, #542475) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px rgba(45, 10, 78, .18) !important;
+}
+.app-layout.legacy-admin :is(.payment-modal, .stock-modal, .ua-modal, .ua-drawer, .menu-workspace-modal, .category-workspace-modal) :is(.primary-button, .ops-main-action, .ua-primary-action):hover:not(:disabled) {
+  background: linear-gradient(135deg, #542475, #3f145f) !important;
+}
+.app-layout.legacy-admin :is(.payment-modal, .stock-modal, .ua-modal, .ua-drawer, .menu-workspace-modal, .category-workspace-modal) .secondary-button {
+  border-color: #c9a9dc !important;
+  background: #fff !important;
+  color: #542475 !important;
+}
+.app-layout.legacy-admin :is(.payment-modal, .stock-modal, .menu-workspace-modal, .category-workspace-modal) .payment-modal-kicker {
+  color: #6b368f !important;
+}
+.app-layout.legacy-admin .category-workspace-tabs button strong {
+  border: 1px solid #d9c6e5;
+  background: #f0e8f6;
+  color: #542475;
+}
+.app-layout.legacy-admin .category-workspace-tabs button.active strong {
+  border-color: #542475;
+  background: #542475;
+  color: #fff;
+}
+.app-layout.legacy-admin .category-create-panel > header > span {
+  background: #542475;
+  color: #fff;
+}
+
 .app-layout.legacy-admin .ua-stat-rail { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 760px) {
   .app-layout.legacy-admin .ua-stat-rail { grid-template-columns: 1fr; }
