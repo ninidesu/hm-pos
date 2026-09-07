@@ -1479,6 +1479,84 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
   padding: 18px;
   background: #faf7fc;
 }
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-meta > div {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #e5dbea;
+  border-radius: 12px;
+  background: #fff;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-meta span,
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-rows span {
+  color: #796b80;
+  font-size: .72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-meta b,
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-rows b {
+  color: #1f1830;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px dashed #e7ddeb;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-item:last-child {
+  border-bottom: 0;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-item > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-item small {
+  color: #796b80;
+  overflow-wrap: anywhere;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-item > span,
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-item > b {
+  color: #2d0a4e;
+  white-space: nowrap;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-rows {
+  display: grid;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-rows p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-bottom: 1px dashed #e7ddeb;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-rows p:last-child {
+  border-bottom: 0;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 4px 8px;
+  color: #2d0a4e;
+  font-size: 1.1rem;
+}
+.app-layout.legacy-admin .txn-receipt-drawer .txn-detail-total b {
+  color: #542475;
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
 .app-layout.legacy-admin .txn-receipt-drawer .ops-drawer-body > section {
   padding: 18px;
   border: 1px solid #e5dbea;
