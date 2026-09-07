@@ -191,11 +191,20 @@ function normalizeTemperatureType(value) {
 }
 
 function variantOptionsFromConfig(config, product) {
+  if (Array.isArray(config?.choices)) {
+    return config.choices.map((choice, index) => ({
+      key: choice.key || `choice-${index + 1}`,
+      label: String(choice.label || '').trim(),
+      quantity: Math.max(1, Number(choice.quantity) || 1),
+      price: Number(choice.price ?? product.price ?? 0),
+    })).filter((option) => option.label && option.price >= 0)
+  }
   const labels = config?.labels || {}
   const prices = config?.prices || {}
   return Object.entries(labels).map(([key, label]) => ({
     key,
     label,
+    quantity: 1,
     price: Number(prices[key] ?? product.price ?? 0),
   })).filter((option) => option.label && option.price > 0)
 }
@@ -224,6 +233,7 @@ function productOptionDefaults(product) {
     temperatureType: normalizeTemperatureType(product.temperatureType),
     variantConfig,
     variantOptions,
+    infoImageUrl: variantConfig?.infoImageUrl || variantConfig?.info_image_url || '',
   }
 }
 function normalizeProduct(row) {
@@ -578,7 +588,8 @@ export default function CashierPage() {
       product.temperatureType ||
       product.allowSugar ||
       product.allowIce ||
-      product.allowAddons,
+      product.allowAddons ||
+      product.infoImageUrl,
     )
   }
 
@@ -964,6 +975,7 @@ function CustomizationSummary({ item }) {
 
 
 function ItemCustomizationModal({ product, onClose, onAdd }) {
+  const [showMoreInfo, setShowMoreInfo] = useState(false)
   const variantOptions = product.variantOptions || []
   const existingVariant = variantOptions.find((option) => option.key === product.customizations?.variantKey) || variantOptions[0]
   const temperatureOptions = product.temperatureType === 'hot' ? ['Hot'] : product.temperatureType === 'cold' ? ['Cold'] : product.temperatureType === 'both' ? ['Hot', 'Cold'] : []
@@ -998,6 +1010,7 @@ function ItemCustomizationModal({ product, onClose, onAdd }) {
       variantKey: selectedVariant?.key || '',
       variantLabel: selectedVariant?.label || '',
       variantPrice: selectedVariant?.price,
+      variantQuantity: selectedVariant?.quantity || 1,
       temperature,
       sugarLevel,
       iceLevel,
@@ -1014,7 +1027,10 @@ function ItemCustomizationModal({ product, onClose, onAdd }) {
           <h2 id="customize-modal-title">{product.name}</h2>
           <p>{product.category}</p>
         </div>
-        <button type="button" className="customize-close" onClick={onClose} aria-label="Close customization">&times;</button>
+        <div className="customize-header-actions">
+          <button type="button" className="customize-more-info" onClick={() => setShowMoreInfo(true)}>More info</button>
+          <button type="button" className="customize-close" onClick={onClose} aria-label="Close customization">&times;</button>
+        </div>
       </header>
       <div className="customize-modal-body">
         {hasChoiceGroups ? <div className="customize-choice-list" aria-label="Customization options">
@@ -1048,6 +1064,15 @@ function ItemCustomizationModal({ product, onClose, onAdd }) {
       </footer>
       </section>
     </div>
+    {showMoreInfo ? <ItemInfoPoster product={product} onClose={() => setShowMoreInfo(false)} /> : null}
+  </div>, document.body)
+}
+function ItemInfoPoster({ product, onClose }) {
+  return createPortal(<div className="item-info-backdrop" role="dialog" aria-modal="true" aria-labelledby="item-info-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+    <section className="item-info-poster">
+      <header><div><span>Item information</span><h2 id="item-info-title">{product.name}</h2></div><button type="button" className="item-info-close" onClick={onClose} aria-label="Close item information">&times;</button></header>
+      <div className="item-info-image-wrap">{product.infoImageUrl ? <img src={product.infoImageUrl} alt={`${product.name} information`} /> : <div className="item-info-empty">No item information image has been added yet.</div>}</div>
+    </section>
   </div>, document.body)
 }
 function OptionGroup({ title, options, value, onChange }) {
@@ -1055,7 +1080,7 @@ function OptionGroup({ title, options, value, onChange }) {
   return <section className={`customize-choice-section${layoutClass}`} aria-label={title}><div className="customize-section-head"><h3>{title}</h3><span>Select one</span></div><div className="customize-choice-grid">{options.map((option) => <button type="button" className={`customize-choice-button ${value === option ? 'active' : ''}`} aria-pressed={value === option} key={option} onClick={() => onChange(option)}><span className="customize-choice-label">{option}</span></button>)}</div></section>
 }
 function VariantGroup({ title, options, value, onChange }) {
-  return <section className="customize-choice-section customize-variant-section" aria-label={title}><div className="customize-section-head"><h3>{title}</h3><span>Select one</span></div><div className="customize-choice-grid">{options.map((option) => <button type="button" className={`customize-choice-button ${value?.key === option.key ? 'active' : ''}`} aria-pressed={value?.key === option.key} key={option.key} onClick={() => onChange(option)}><span className="customize-choice-label">{option.label}</span><small>{peso(option.price)}</small></button>)}</div></section>
+  return <section className="customize-choice-section customize-variant-section" aria-label={title}><div className="customize-section-head"><h3>{title}</h3><span>Select one</span></div><div className="customize-choice-grid">{options.map((option) => <button type="button" className={`customize-choice-button ${value?.key === option.key ? 'active' : ''}`} aria-pressed={value?.key === option.key} key={option.key} onClick={() => onChange(option)}><span className="customize-choice-label">{option.label}</span><small>{option.quantity > 1 ? `${option.quantity} pcs · ` : ''}{peso(option.price)}</small></button>)}</div></section>
 }function DiscountPanel({ discount, setDiscount }) {
   return <section className="cashier-panel"><label className="cashier-check"><input type="checkbox" checked={discount.enabled} onChange={(event) => setDiscount((current) => ({ ...current, enabled: event.target.checked }))} /> Apply PWD / Senior Discount</label>{discount.enabled ? <div className="cashier-form-grid"><select value={discount.type} onChange={(event) => setDiscount((current) => ({ ...current, type: event.target.value }))}><option value="">Discount type</option><option value="PWD">PWD</option><option value="Senior">Senior</option></select><input maxLength={60} value={discount.customerName} onChange={(event) => setDiscount((current) => ({ ...current, customerName: sanitizePersonName(event.target.value, 60) }))} placeholder="Customer name" /><input maxLength={32} value={discount.idNumber} onChange={(event) => setDiscount((current) => ({ ...current, idNumber: event.target.value }))} placeholder="PWD/Senior ID number" /></div> : null}</section>
 }

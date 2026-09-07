@@ -170,3 +170,12 @@ export async function uploadMenuItemImage(file) {
   const { data } = supabase.storage.from('menu-images').getPublicUrl(path)
   return data.publicUrl
 }
+
+export async function uploadMenuItemInfoImage(file) {
+  const { extension } = await validateImageFile(file, { label: 'Item information image', maxBytes: Number.MAX_SAFE_INTEGER })
+  const path = `${crypto.randomUUID()}.${extension}`
+  const { error: uploadError } = await supabase.storage.from('menu-images').upload(path, file, { contentType: file.type, upsert: false })
+  if (uploadError) throw uploadError
+  const { data } = supabase.storage.from('menu-images').getPublicUrl(path)
+  return data.publicUrl
+}

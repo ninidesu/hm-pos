@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, Archive, Bell, Box, Check, Copy, Eye, Folder,
-  Grid, ImagePlus, List, MoreVertical, Pencil, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Tags, TrendingUp, X,
+  Grid, ImagePlus, Info, List, MoreVertical, Pencil, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Tags, TrendingUp, X,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { money } from '../utils/money'
@@ -11,7 +11,7 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import {
   fetchMainCategories, fetchSubcategories, fetchManageMenuItems,
   upsertMainCategory, archiveMainCategory, upsertSubcategory, archiveSubcategory,
-  upsertMenuItem, setMenuItemAvailability, archiveMenuItem, duplicateMenuItem, uploadMenuItemImage,
+  upsertMenuItem, setMenuItemAvailability, archiveMenuItem, duplicateMenuItem, uploadMenuItemImage, uploadMenuItemInfoImage,
 } from '../services/manageMenuService'
 import { shouldShowSystemNotification } from '../services/staffSettingsService'
 import { useManagementSessionState } from '../hooks/useManagementSessionState'
@@ -514,6 +514,16 @@ function ItemDrawer({ item, onClose, onEdit, onToggleAvailability }) {
 }
 
 function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, onClose, onDelete, onSave }) {
+  const existingChoiceConfig = item?.variantOptions?.type === 'choices' ? item.variantOptions : null
+  const existingItemInfoImage = item?.variantOptions?.infoImageUrl || item?.variantOptions?.info_image_url || ''
+  const initialChoices = Array.isArray(existingChoiceConfig?.choices)
+    ? existingChoiceConfig.choices.slice(0, 5).map((choice, index) => ({
+      key: choice.key || `choice-${index + 1}`,
+      label: choice.label || '',
+      quantity: choice.quantity ?? 1,
+      price: choice.price ?? '',
+    }))
+    : []
   const draftScope = `${isAdmin ? 'admin' : 'staff'}:menu:${item?.id || 'new'}:draft`
   const [values, setValues, clearValues] = useManagementSessionState(`${draftScope}:values`, {
     name: item?.name || '', description: item?.description || '', mainCategoryId: item?.mainCategoryId || mainCategories[0]?.id || '',
@@ -521,29 +531,40 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
     allowIce: item?.allowIce ?? false, allowSugar: item?.allowSugar ?? false, allowAddons: item?.allowAddons ?? false,
     imageUrl: item?.imageUrl || '', manualAvailable: item?.manualAvailable ?? true, isFeatured: item?.isFeatured ?? false, isBestseller: item?.isBestseller ?? false,
     prepTimeMinutes: item?.prepTimeMinutes ?? '', availableFrom: item?.availableFrom || '', availableUntil: item?.availableUntil || '', sortOrder: item?.sortOrder ?? 0,
+    choicesEnabled: Boolean(existingChoiceConfig?.choices?.length), choices: initialChoices, infoImageUrl: existingItemInfoImage,
   })
   const [imagePreview, setImagePreview] = useState(item?.image || '')
+  const [infoImagePreview, setInfoImagePreview] = useState(existingItemInfoImage)
   const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [section, setSection, clearSection] = useManagementSessionState(`${draftScope}:section`, 'basics')
   const fileRef = useRef(null)
+  const infoFileRef = useRef(null)
   const localPreviewRef = useRef('')
+  const localInfoPreviewRef = useRef('')
   const set = (key, value) => setValues((c) => ({ ...c, [key]: value }))
+  const choices = Array.isArray(values.choices) ? values.choices : []
   const releaseLocalPreview = () => {
     if (!localPreviewRef.current) return
     URL.revokeObjectURL(localPreviewRef.current)
     localPreviewRef.current = ''
   }
-  const close = () => { releaseLocalPreview(); clearValues(); clearSection(); onClose() }
+  const releaseLocalInfoPreview = () => {
+    if (!localInfoPreviewRef.current) return
+    URL.revokeObjectURL(localInfoPreviewRef.current)
+    localInfoPreviewRef.current = ''
+  }
+  const close = () => { releaseLocalPreview(); releaseLocalInfoPreview(); clearValues(); clearSection(); onClose() }
 
   useEffect(() => {
     setImagePreview(item?.image || '')
-    return releaseLocalPreview
-  }, [item?.id, item?.image])
+    setInfoImagePreview(existingItemInfoImage)
+    return () => { releaseLocalPreview(); releaseLocalInfoPreview() }
+  }, [item?.id, item?.image, existingItemInfoImage])
 
   useEffect(() => {
-    if (!['basics', 'options'].includes(section)) setSection('basics')
+    if (!['basics', 'options', 'information'].includes(section)) setSection('basics')
   }, [section, setSection])
 
   const availableSubcategories = useMemo(() => subcategories.filter((s) => !s.is_archived && s.main_category_id === values.mainCategoryId), [subcategories, values.mainCategoryId])
@@ -571,15 +592,61 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
     }
   }
 
+  const handleInfoFile = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    releaseLocalInfoPreview()
+    const localPreview = URL.createObjectURL(file)
+    localInfoPreviewRef.current = localPreview
+    setInfoImagePreview(localPreview)
+    setUploading(true); setError('')
+    try {
+      const url = await uploadMenuItemInfoImage(file)
+      set('infoImageUrl', url)
+      releaseLocalInfoPreview()
+      setInfoImagePreview(url)
+    } catch (cause) {
+      releaseLocalInfoPreview()
+      setInfoImagePreview(existingItemInfoImage)
+      setError(describeError(cause, 'Could not upload the information image.'))
+    } finally {
+      event.target.value = ''
+      setUploading(false)
+    }
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     if (!values.name.trim()) { setSection('basics'); return setError('Item name is required.') }
     const price = Number(values.price)
     if (Number.isNaN(price) || price < 0) { setSection('basics'); return setError('Price must be zero or greater.') }
+    let variantOptions = { ...(item?.variantOptions || {}) }
+    if (values.infoImageUrl) variantOptions.infoImageUrl = values.infoImageUrl
+    else if (infoImagePreview) variantOptions.infoImageUrl = infoImagePreview
+    else {
+      delete variantOptions.infoImageUrl
+      delete variantOptions.info_image_url
+    }
+    if (values.choicesEnabled) {
+      if (!choices.length || choices.length > 5) { setSection('options'); return setError('Add between 1 and 5 item choices.') }
+      const normalizedChoices = choices.map((choice, index) => ({
+        key: choice.key || `choice-${index + 1}`,
+        label: String(choice.label || '').trim(),
+        quantity: Number(choice.quantity),
+        price: Number(choice.price),
+      }))
+      if (normalizedChoices.some((choice) => !choice.label || !Number.isInteger(choice.quantity) || choice.quantity < 1 || Number.isNaN(choice.price) || choice.price < 0)) {
+        setSection('options')
+        return setError('Each choice needs a name, a whole-number stock quantity, and a valid price.')
+      }
+      variantOptions = { ...variantOptions, type: 'choices', choices: normalizedChoices }
+    } else if (variantOptions?.type === 'choices') {
+      variantOptions = {}
+    }
     setSaving(true); setError('')
     try {
-      await onSave({ id: item?.id, ...values, price, prepTimeMinutes: values.prepTimeMinutes === '' ? null : Number(values.prepTimeMinutes) })
-      releaseLocalPreview(); clearValues(); clearSection()
+      await onSave({ id: item?.id, ...values, price, variantOptions, prepTimeMinutes: values.prepTimeMinutes === '' ? null : Number(values.prepTimeMinutes) })
+      releaseLocalPreview(); releaseLocalInfoPreview(); clearValues(); clearSection()
     } catch (cause) {
       if (cause?.code !== 'APPROVAL_CANCELLED') setError(describeError(cause, 'Could not save this item.'))
       setSaving(false)
@@ -599,6 +666,7 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
             <nav className="menu-editor-nav" role="tablist" aria-label="Item editor sections">
               <button type="button" role="tab" aria-selected={section === 'basics'} aria-controls="menu-editor-basics" className={section === 'basics' ? 'active' : ''} onClick={() => setSection('basics')}><ImagePlus size={18} /><span><b>Basics</b><small>Name, image, and category</small></span></button>
               <button type="button" role="tab" aria-selected={section === 'options'} aria-controls="menu-editor-options" className={section === 'options' ? 'active' : ''} onClick={() => setSection('options')}><SlidersHorizontal size={18} /><span><b>Options</b><small>Availability and choices</small></span></button>
+              <button type="button" role="tab" aria-selected={section === 'information'} aria-controls="menu-editor-information" className={section === 'information' ? 'active' : ''} onClick={() => setSection('information')}><Info size={18} /><span><b>Item information</b><small>Poster or product guide</small></span></button>
             </nav>
             <div className="menu-editor-panel">
               {section === 'basics' && (
@@ -630,6 +698,31 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
                     <label className="menu-option-card"><input type="checkbox" checked={values.allowIce} onChange={(e) => set('allowIce', e.target.checked)} /><span><b>Ice levels</b><small>Let customers choose ice amount.</small></span></label>
                     <label className="menu-option-card"><input type="checkbox" checked={values.allowSugar} onChange={(e) => set('allowSugar', e.target.checked)} /><span><b>Sugar levels</b><small>Let customers adjust sweetness.</small></span></label>
                   </div></fieldset>
+                  <fieldset className="menu-option-group menu-choice-group"><legend>Item choices</legend>
+                    <label className="menu-option-card menu-choice-toggle"><input type="checkbox" checked={values.choicesEnabled} onChange={(e) => { set('choicesEnabled', e.target.checked); if (e.target.checked && !choices.length) set('choices', [{ key: 'choice-1', label: '', quantity: 1, price: values.price }]) }} /><span><b>Offer pack or serving choices</b><small>Customers can choose up to 5 prices. Stock quantity is deducted for each choice.</small></span></label>
+                    {values.choicesEnabled ? <div className="menu-choice-editor">
+                      <p className="menu-choice-help">Add choices such as Per Piece or Per Box (6 pcs). The stock quantity is the number of pieces deducted for one choice.</p>
+                      <div className="menu-choice-list">
+                        {choices.map((choice, index) => <div className="menu-choice-row" key={choice.key || index}>
+                          <span className="menu-choice-number">{index + 1}</span>
+                          <label className="field"><span>Choice name</span><input value={choice.label} maxLength={60} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, label: e.target.value } : current))} placeholder="Per Box (6 pcs)" /></label>
+                          <label className="field"><span>Stock quantity</span><input type="number" min="1" step="1" value={choice.quantity} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, quantity: e.target.value } : current))} placeholder="6" /></label>
+                          <label className="field"><span>Price (PHP)</span><input type="number" min="0" step="0.01" value={choice.price} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, price: e.target.value } : current))} placeholder="165.00" /></label>
+                          <button type="button" className="menu-choice-remove" onClick={() => set('choices', choices.filter((_, choiceIndex) => choiceIndex !== index))}>Remove</button>
+                        </div>)}
+                      </div>
+                      {choices.length < 5 ? <button type="button" className="ops-secondary-action compact menu-choice-add" onClick={() => set('choices', [...choices, { key: `choice-${choices.length + 1}`, label: '', quantity: 1, price: '' }])}>Add choice</button> : <small className="menu-choice-limit">Maximum of 5 choices reached.</small>}
+                    </div> : null}
+                  </fieldset>
+                </section>
+              )}
+              {section === 'information' && (
+                <section id="menu-editor-information" role="tabpanel" className="menu-form-section" aria-label="Item information">
+                  <header><h3>Item information</h3><p>Upload a poster or image with useful details customers can view before ordering.</p></header>
+                  <div className="menu-info-image-editor">
+                    <div className="menu-info-image-preview">{infoImagePreview ? <img src={infoImagePreview} alt="Item information preview" /> : <span>No information image yet</span>}</div>
+                    <div className="menu-info-image-actions"><button type="button" className="ops-secondary-action compact" onClick={() => infoFileRef.current?.click()} disabled={uploading}>{uploading ? 'Uploading…' : infoImagePreview ? 'Replace image' : 'Upload image'}</button><input ref={infoFileRef} type="file" accept="image/*" hidden onChange={handleInfoFile} /><small>Choose an image file to show as the item’s information poster.</small>{infoImagePreview ? <button type="button" className="menu-info-remove" onClick={() => { releaseLocalInfoPreview(); setInfoImagePreview(''); set('infoImageUrl', '') }}>Remove image</button> : null}</div>
+                  </div>
                 </section>
               )}
             </div>

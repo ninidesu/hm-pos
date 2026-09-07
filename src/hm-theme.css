@@ -1775,12 +1775,160 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
 }
 
 html[data-theme] .cashier-v2 .cashier-custom-modal.customize-modal {
-  width: min(680px, calc(100vw - 24px)) !important;
+  width: min(920px, calc(100vw - 24px)) !important;
   border-color: #ddcde6 !important;
   border-radius: 16px !important;
   background: #fff !important;
   color: #2d0a4e !important;
   box-shadow: var(--customize-shadow) !important;
+}
+
+/* Item information poster and the wider choice header actions. */
+html[data-theme] .cashier-v2 .customize-header-actions {
+  grid-column: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+html[data-theme] .cashier-v2 .customize-more-info {
+  min-height: 44px;
+  border: 1px solid #542475;
+  border-radius: 8px;
+  background: #542475;
+  color: #fff;
+  min-width: 84px;
+  padding: 0 13px;
+  font: inherit;
+  font-size: .74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+html[data-theme] .cashier-v2 .customize-more-info:hover,
+html[data-theme] .cashier-v2 .customize-more-info:focus-visible {
+  border-color: #3f145f;
+  background: #3f145f;
+  color: #fff;
+}
+
+.item-info-backdrop {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(25, 12, 34, .62);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.item-info-poster {
+  width: min(880px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  overflow: hidden;
+  border: 1px solid #dfcfe8;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(45, 10, 78, .35);
+}
+
+.item-info-poster > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e2d5e9;
+  background: #fff;
+}
+
+.item-info-poster > header span {
+  display: block;
+  color: #6d5a78;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.item-info-poster h2 {
+  margin: 4px 0 0;
+  color: #2d0a4e;
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+
+.item-info-close {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid #d9c6e5;
+  border-radius: 50%;
+  background: #fff;
+  color: #542475;
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.item-info-close:hover,
+.item-info-close:focus-visible {
+  border-color: #542475;
+  background: #f0e8f6;
+}
+
+.item-info-image-wrap {
+  max-height: calc(100dvh - 132px);
+  overflow: auto;
+  padding: 18px;
+  background: #f6f1f9;
+  text-align: center;
+}
+
+.item-info-image-wrap img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: calc(100dvh - 168px);
+  object-fit: contain;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.item-info-empty {
+  min-height: 300px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  border: 1px dashed #d9c6e5;
+  border-radius: 10px;
+  background: #fff;
+  color: #6d5a78;
+  font-size: .9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  html[data-theme] .cashier-v2 .customize-header-actions {
+    gap: 5px;
+  }
+
+  html[data-theme] .cashier-v2 .customize-more-info {
+    min-height: 42px;
+    min-width: 78px;
+    padding: 0 9px;
+    font-size: .68rem;
+  }
+
+  .item-info-backdrop { padding: 10px; }
+  .item-info-poster { width: calc(100vw - 20px); max-height: calc(100dvh - 20px); }
+  .item-info-image-wrap { padding: 10px; max-height: calc(100dvh - 108px); }
 }
 
 html[data-theme] .cashier-v2 .customize-modal-header,
@@ -2224,4 +2372,19 @@ html[data-theme='dark'] .cashier-v2 .cashier-receipt-actions button:last-child {
 .cashier-v2 .cashier-order-tab .cashier-tab-close:focus-visible {
   background: var(--brand-soft);
   color: var(--brand-strong) !important;
+}
+
+/* The header action area contains both More info and the close control. */
+html[data-theme] .cashier-v2 .customize-modal-header {
+  grid-template-columns: 88px minmax(0, 1fr) auto !important;
+}
+
+@media (max-width: 640px) {
+  html[data-theme] .cashier-v2 .customize-modal-header {
+    grid-template-columns: 56px minmax(0, 1fr) auto !important;
+  }
+
+  html[data-theme] .cashier-v2 .customize-header-actions {
+    gap: 4px;
+  }
 }
