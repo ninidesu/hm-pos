@@ -9,7 +9,7 @@ Standalone manager and cashier workspace for HM POS.
 - Menu management
 - Inventory management with stock adjustments
 - Cashier account management
-- Cashier POS with VAT-inclusive pricing, Cash / GCash / Bank Transfer payments, receipt preview, and stock visibility on menu cards
+- Cashier POS with Cash / GCash / Bank Transfer payments, receipt preview, and stock visibility on menu cards
 
 ## Data policy
 

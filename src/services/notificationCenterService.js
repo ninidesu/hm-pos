@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase'
+
 const CENTER_EVENT = 'hrm-pos:notification-center-changed'
 const MAX_NOTIFICATIONS = 50
 
@@ -36,6 +38,13 @@ export function addStaffNotification(userId, notification) {
     read: false,
   }
   return writeStored(userId, [item, ...readStored(userId)].slice(0, MAX_NOTIFICATIONS))
+}
+
+export async function addCurrentUserNotification(notification) {
+  const { data } = await supabase.auth.getUser()
+  const userId = data?.user?.id
+  if (!userId) return []
+  return addStaffNotification(userId, notification)
 }
 
 export function markStaffNotificationRead(userId, notificationId) {

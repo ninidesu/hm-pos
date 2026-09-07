@@ -19,25 +19,27 @@ export function resolveAuthWelcomeName(...sources) {
       continue
     }
     const candidate = [
+      source.username,
       source.display_name,
       source.full_name,
       source.first_name,
       source.name,
-      source.username,
     ].map(normalizeWelcomeName).find(Boolean)
     if (candidate) return candidate
   }
   return ''
 }
 
-export function buildAuthWelcomeMessage(name) {
-  return name ? `Welcome to HM POS, ${name}!` : 'Welcome to HM POS!'
+export function buildAuthWelcomeMessage(name, storeName = 'HM POS') {
+  const brand = String(storeName || 'HM POS').trim() || 'HM POS'
+  return name ? `Welcome to ${brand}, ${name}!` : `Welcome to ${brand}!`
 }
 
 export function queueAuthWelcome(...sources) {
   if (typeof window === 'undefined') return
   const name = resolveAuthWelcomeName(...sources)
-  window.sessionStorage.setItem(AUTH_WELCOME_STORAGE_KEY, JSON.stringify({ name, queuedAt: Date.now() }))
+  const storeName = sources.map((source) => source && typeof source === 'object' ? source.storeName || source.store_name : '').find(Boolean) || 'HM POS'
+  window.sessionStorage.setItem(AUTH_WELCOME_STORAGE_KEY, JSON.stringify({ name, storeName, queuedAt: Date.now() }))
 }
 
 export function readAuthWelcome() {
@@ -48,10 +50,11 @@ export function readAuthWelcome() {
     const parsed = JSON.parse(raw)
     return {
       name: normalizeWelcomeName(parsed?.name),
+      storeName: String(parsed?.storeName || 'HM POS').trim() || 'HM POS',
       token: String(parsed?.queuedAt || ''),
     }
   } catch {
-    return { name: '', token: '' }
+    return { name: '', storeName: 'HM POS', token: '' }
   }
 }
 

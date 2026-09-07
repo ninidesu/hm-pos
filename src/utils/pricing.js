@@ -1,8 +1,8 @@
 export const DEFAULT_PRICING = Object.freeze({
-  vatRate: 0.12,
-  pricesIncludeVat: true,
+  vatRate: 0,
+  pricesIncludeVat: false,
   currency: 'PHP',
-  version: 1,
+  version: 2,
 })
 
 export function roundMoney(value) {
@@ -10,16 +10,13 @@ export function roundMoney(value) {
 }
 
 export function normalizePricing(value = {}) {
-  const parsedRate = Number(value?.vatRate)
   const parsedVersion = Number(value?.version)
 
   return {
     ...DEFAULT_PRICING,
     ...value,
-    vatRate: Number.isFinite(parsedRate) && parsedRate >= 0 && parsedRate <= 1
-      ? parsedRate
-      : DEFAULT_PRICING.vatRate,
-    pricesIncludeVat: value?.pricesIncludeVat !== false,
+    vatRate: 0,
+    pricesIncludeVat: false,
     currency: typeof value?.currency === 'string' && value.currency.trim()
       ? value.currency.trim().toUpperCase()
       : DEFAULT_PRICING.currency,
@@ -32,26 +29,16 @@ export function formatVatRate(rate) {
 }
 
 export function vatIncludedAmount(baseAmount, vatRate = DEFAULT_PRICING.vatRate) {
-  return roundMoney(Number(baseAmount || 0) * (1 + Number(vatRate || 0)))
+  return roundMoney(baseAmount)
 }
 
 export function vatPortionOfInclusiveAmount(inclusiveAmount, vatRate = DEFAULT_PRICING.vatRate) {
-  const rate = Number(vatRate || 0)
-  return rate === 0 ? 0 : roundMoney(Number(inclusiveAmount || 0) * rate / (1 + rate))
+  return 0
 }
 
 export function vatBreakdownFromInclusiveAmount(inclusiveAmount, vatRate = DEFAULT_PRICING.vatRate, pricesIncludeVat = true) {
   const totalAmount = roundMoney(inclusiveAmount)
-  if (!pricesIncludeVat) {
-    return { baseAmount: totalAmount, vatAmount: 0, totalAmount }
-  }
-
-  const vatAmount = vatPortionOfInclusiveAmount(totalAmount, vatRate)
-  return {
-    baseAmount: roundMoney(totalAmount - vatAmount),
-    vatAmount,
-    totalAmount,
-  }
+  return { baseAmount: totalAmount, vatAmount: 0, totalAmount }
 }
 
 export function isVatExemptDiscountType(discountType) {
@@ -92,9 +79,8 @@ export function vatExemptDiscountBreakdown(
 
 /**
  * Builds the order-level breakdown used by cashier, staff, and customer
- * receipts. discountSubtotal is the gross VAT-inclusive amount of the
- * selected eligible base items; discountAmount is the stored total benefit
- * (VAT removed plus the 20% discount).
+ * receipts. discountSubtotal is the amount of the selected eligible base
+ * items; discountAmount is the stored discount amount.
  */
 export function buildVatExemptOrderBreakdown({
   subtotal = 0,

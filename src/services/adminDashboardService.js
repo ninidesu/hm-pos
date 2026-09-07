@@ -21,7 +21,7 @@ function isRevenueOrder(order) {
 }
 
 export async function fetchDashboardData() {
-  const windowStart = dayStart(-13)
+  const windowStart = dayStart(-29)
   const [ordersResult, stockResult, menuResult, auditResult] = await Promise.all([
     supabase.from('orders').select(ORDER_SELECT).gte('created_at', windowStart.toISOString()).order('created_at', { ascending: true }),
     supabase.from('stock').select('id,quantity,min_stock_level,high_stock_level,unit,supplier,expiration_date,menu_items(name)').eq('is_archived', false),
@@ -83,7 +83,7 @@ export function computeDashboardMetrics({ orders, stockRows = [], menuItems = []
   const salesTrend = []
   const ordersTrend = []
   const averageOrderTrend = []
-  for (let offset = 13; offset >= 0; offset -= 1) {
+  for (let offset = 29; offset >= 0; offset -= 1) {
     const day = isoDay(dayStart(-offset))
     const sales = salesByDay.get(day) || 0
     const count = paidOrdersByDay.get(day) || 0
@@ -93,7 +93,13 @@ export function computeDashboardMetrics({ orders, stockRows = [], menuItems = []
   }
 
   const itemTotals = new Map()
+  const hourlyTotals = new Map()
   orders.filter(isRevenueOrder).forEach((order) => {
+    const hour = new Date(order.created_at).getHours()
+    const hourly = hourlyTotals.get(hour) || { hour, orders: 0, revenue: 0 }
+    hourly.orders += 1
+    hourly.revenue += Number(order.final_total || 0)
+    hourlyTotals.set(hour, hourly)
     ;(order.order_items || []).forEach((item) => {
       const name = item.display_name || item.item_name
       const current = itemTotals.get(name) || { name, qty: 0, revenue: 0 }
@@ -102,6 +108,8 @@ export function computeDashboardMetrics({ orders, stockRows = [], menuItems = []
       itemTotals.set(name, current)
     })
   })
+  const rankedItems = [...itemTotals.values()].sort((left, right) => right.qty - left.qty)
+  const peakHours = [...hourlyTotals.values()].sort((left, right) => right.orders - left.orders || right.revenue - left.revenue).slice(0, 5)
 
   return {
     totalSales,
@@ -112,8 +120,10 @@ export function computeDashboardMetrics({ orders, stockRows = [], menuItems = []
     salesTrend,
     ordersTrend,
     averageOrderTrend,
-    bestSellers: [...itemTotals.values()].sort((left, right) => right.qty - left.qty).slice(0, 5),
-    recentOrders: [...orders].sort((left, right) => new Date(right.created_at) - new Date(left.created_at)).slice(0, 6),
+    bestSellers: rankedItems.slice(0, 5),
+    lowSellers: [...rankedItems].sort((left, right) => left.qty - right.qty || left.revenue - right.revenue).slice(0, 5),
+    peakHours,
+    recentOrders: [...orders].sort((left, right) => new Date(right.created_at) - new Date(left.created_at)).slice(0, 7),
     lowStockItems,
     outOfStockItems,
     unavailableMenuItems: menuItems.filter((item) => !item.is_available).length,

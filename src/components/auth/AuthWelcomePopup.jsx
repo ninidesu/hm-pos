@@ -32,7 +32,7 @@ export default function AuthWelcomePopup({ welcome, onClose }) {
           </span>
           <div className="auth-welcome-popup__copy">
             <b>Signed in</b>
-            <p>{buildAuthWelcomeMessage(welcome.name)}</p>
+            <p>{buildAuthWelcomeMessage(welcome.name, welcome.storeName)}</p>
           </div>
         </motion.aside>
       ) : null}

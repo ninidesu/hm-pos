@@ -19,7 +19,9 @@ import { usePricing } from '../context/usePricing'
 import { getCurrentPortalSession, signOutPortal } from '../lib/auth'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
-import { buildVatExemptOrderBreakdown, formatVatRate } from '../utils/pricing'
+import { buildVatExemptOrderBreakdown } from '../utils/pricing'
+import useStoreInfo from '../hooks/useStoreInfo'
+import { StoreReceiptBrand, StoreReceiptFooter } from '../components/StoreReceiptBrand'
 
 const paymentMethods = [
   { value: 'Cash', label: 'Cash', icon: Banknote },
@@ -28,26 +30,22 @@ const paymentMethods = [
 ]
 
 const peso = (value) => `PHP ${Number(value || 0).toFixed(2)}`
-const receiptStore = {
-  name: import.meta.env.VITE_POS_NAME || 'HM POS',
-  branch: import.meta.env.VITE_POS_BRANCH || '',
-  address: import.meta.env.VITE_POS_ADDRESS || '',
-  phone: import.meta.env.VITE_POS_PHONE || '',
-  tin: import.meta.env.VITE_POS_TIN || '',
-}
-const localIdentifier = (prefix) => {
-  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
+const manilaDateKey = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', month: '2-digit', day: '2-digit' }).formatToParts(new Date())
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
-  const dateKey = `${values.year}${values.month}${values.day}`
+  return `${values.month}${values.day}`
+}
+const formattedIdentifier = (prefix, sequence) => `${prefix}-${manilaDateKey()}-${String(sequence).padStart(4, '0')}`
+const localIdentifier = (prefix) => {
   let sequence
   try {
-    const storageKey = `hrm-pos:short-id:${prefix}:${dateKey}`
-    sequence = Number(window.localStorage.getItem(storageKey) || 0) + 1
+    const storageKey = `hrm-pos:short-id:${prefix}`
+    sequence = (Number(window.localStorage.getItem(storageKey) || 0) % 9999) + 1
     window.localStorage.setItem(storageKey, String(sequence))
   } catch {
-    sequence = (Date.now() % 10000) + 1
+    sequence = (Date.now() % 9999) + 1
   }
-  return `${prefix}-${values.month}${values.day}-${String(sequence).padStart(4, '0')}`
+  return formattedIdentifier(prefix, sequence)
 }
 const defaultAddonOptions = [
   { name: 'Espresso Shot', price: 30 },
@@ -70,27 +68,41 @@ const emptyDiscount = () => ({ enabled: false, type: '', customerName: '', idNum
 const emptyPayment = () => ({ method: 'Cash', cashReceived: '', referenceNumber: '', accountNumber: '09', bankName: '' })
 const MAX_OPEN_ORDER_TABS = 6
 const CASHIER_WORKSPACE_STORAGE_KEY = 'hrm-pos:cashier-workspace-v1'
-const createOrderTab = (index = 1) => ({
-  id: `WI-${String(index).padStart(3, '0')}`,
+const createOrderTab = (id = formattedIdentifier('WI', 1)) => ({
+  id,
   cart: [],
   discount: emptyDiscount(),
   payment: emptyPayment(),
 })
 
+const nextOrderTabId = (tabs = []) => {
+  const usedIds = new Set(tabs.map((tab) => tab?.id).filter(Boolean))
+  let sequence = 1
+  while (usedIds.has(formattedIdentifier('WI', sequence))) sequence += 1
+  return formattedIdentifier('WI', sequence)
+}
+
 function loadSavedCashierWorkspace() {
-  const fallback = { orderTabs: [createOrderTab(1)], activeOrderId: 'WI-001' }
+  const firstTab = createOrderTab()
+  const fallback = { orderTabs: [firstTab], activeOrderId: firstTab.id }
   try {
     const saved = JSON.parse(window.localStorage.getItem(CASHIER_WORKSPACE_STORAGE_KEY) || 'null')
     if (!Array.isArray(saved?.orderTabs) || !saved.orderTabs.length) return fallback
 
-    const orderTabs = saved.orderTabs.slice(0, MAX_OPEN_ORDER_TABS).map((tab, index) => ({
-      ...createOrderTab(index + 1),
-      ...tab,
-      id: typeof tab?.id === 'string' && tab.id ? tab.id : `WI-${String(index + 1).padStart(3, '0')}`,
-      cart: Array.isArray(tab?.cart) ? tab.cart : [],
-      discount: { ...emptyDiscount(), ...(tab?.discount || {}) },
-      payment: { ...emptyPayment(), ...(tab?.payment || {}) },
-    }))
+    const orderTabs = []
+    saved.orderTabs.slice(0, MAX_OPEN_ORDER_TABS).forEach((tab) => {
+      const savedId = typeof tab?.id === 'string' && /^WI-\d{4}-\d{4}$/.test(tab.id) && !orderTabs.some((item) => item.id === tab.id)
+        ? tab.id
+        : nextOrderTabId(orderTabs)
+      orderTabs.push({
+        ...createOrderTab(savedId),
+        ...tab,
+        id: savedId,
+        cart: Array.isArray(tab?.cart) ? tab.cart : [],
+        discount: { ...emptyDiscount(), ...(tab?.discount || {}) },
+        payment: { ...emptyPayment(), ...(tab?.payment || {}) },
+      })
+    })
     const activeOrderId = orderTabs.some((tab) => tab.id === saved.activeOrderId)
       ? saved.activeOrderId
       : orderTabs[0].id
@@ -273,7 +285,7 @@ function normalizeOrder(row) {
   }
 }
 
-function storedOrderVatBreakdown(order, vatRate, pricesIncludeVat) {
+function storedOrderVatBreakdown(order) {
   const fallbackDiscountSubtotal = (order.items || [])
     .filter((item) => Boolean(item.isDiscounted ?? item.is_discounted))
     .reduce((sum, item) => {
@@ -288,20 +300,20 @@ function storedOrderVatBreakdown(order, vatRate, pricesIncludeVat) {
     discountType: order.discountType,
     discountAmount: order.discountAmount,
     vatExemptAmount: order.vatExemptAmount,
-    vatRate,
-    pricesIncludeVat,
+    vatRate: 0,
+    pricesIncludeVat: false,
   })
 }
 
-function cartVatBreakdown({ subtotal, discount, discountBreakdown, vatRate, pricesIncludeVat }) {
+function cartVatBreakdown({ subtotal, discount, discountBreakdown }) {
   return buildVatExemptOrderBreakdown({
     subtotal,
     discountSubtotal: discount.enabled ? discountBreakdown.discountSubtotal : 0,
     discountType: discount.enabled ? discount.type : '',
     discountAmount: discount.enabled ? discountBreakdown.totalBenefitAmount : 0,
     vatExemptAmount: discount.enabled ? discountBreakdown.vatExemptAmount : 0,
-    vatRate,
-    pricesIncludeVat,
+    vatRate: 0,
+    pricesIncludeVat: false,
   })
 }
 
@@ -323,6 +335,7 @@ function validatePayment(payment, total) {
 export default function CashierPage() {
   const navigate = useNavigate()
   const { pricing } = usePricing()
+  const storeInfo = useStoreInfo()
   const [savedWorkspace] = useState(loadSavedCashierWorkspace)
   const [products, setProducts] = useState([])
   const [transactions, setTransactions] = useState([])
@@ -369,7 +382,7 @@ export default function CashierPage() {
         setCashierProfile(profile)
         const [productResult, orderResult] = await Promise.all([
           loadMenuItems(),
-          supabase.from('orders').select('id,order_number,receipt_number,subtotal,discount_subtotal,discount_amount,final_total,vat_rate,prices_include_vat,payment_status,payment_confirmed,discount_type,discount_customer_name,discount_id_number,created_at,order_items(*),payments:transactions(*)').order('created_at', { ascending: false }).limit(30),
+          supabase.from('orders').select('id,order_number,receipt_number,cashier_id,subtotal,discount_subtotal,discount_amount,final_total,vat_rate,prices_include_vat,payment_status,payment_confirmed,discount_type,discount_customer_name,discount_id_number,created_at,order_items(*),payments:transactions(*)').order('created_at', { ascending: false }).limit(30),
         ])
         if (ignore) return
         if (!productResult.error) {
@@ -380,7 +393,15 @@ export default function CashierPage() {
           setProducts([])
           setNotice(`The current menu could not load: ${productResult.error.message}`)
         }
-        if (!orderResult.error && orderResult.data) setTransactions(orderResult.data.map(normalizeOrder))
+        if (!orderResult.error && orderResult.data) {
+          const cashierIds = [...new Set(orderResult.data.map((order) => order.cashier_id).filter(Boolean))]
+          let cashierNames = {}
+          if (cashierIds.length) {
+            const { data: cashiers } = await supabase.from('users').select('id,username,full_name').in('id', cashierIds)
+            cashierNames = Object.fromEntries((cashiers || []).map((cashier) => [cashier.id, cashier.username || cashier.full_name || 'Cashier']))
+          }
+          if (!ignore) setTransactions(orderResult.data.map((order) => normalizeOrder({ ...order, cashier_name: cashierNames[order.cashier_id] || 'Cashier' })))
+        }
         const syncError = productResult.error || orderResult.error
         if (syncError) setDataSyncError(syncError.message || 'Live data could not be refreshed.')
         else {
@@ -458,7 +479,7 @@ export default function CashierPage() {
       // The POS remains usable if storage is unavailable or full.
     }
   }, [activeOrderId, orderTabs])
-  const activeOrder = orderTabs.find((tab) => tab.id === activeOrderId) || orderTabs[0] || createOrderTab(1)
+  const activeOrder = orderTabs.find((tab) => tab.id === activeOrderId) || orderTabs[0] || createOrderTab()
   const cart = activeOrder.cart
   const discount = activeOrder.discount
   const payment = activeOrder.payment
@@ -504,8 +525,9 @@ export default function CashierPage() {
   })
   const total = Math.max(0, priceBreakdown.totalAmount)
   const change = payment.method === 'Cash' ? Math.max(0, Number(payment.cashReceived || 0) - total) : 0
-  const cashierName = cashierProfile?.full_name || cashierProfile?.username || cashierProfile?.email || 'Cashier'
+  const cashierName = cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier'
   const cashierUsername = cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier'
+  const storeInitials = String(storeInfo.name || 'HM POS').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
   const cashierStatus = !isSupabaseConfigured
     ? { label: 'Setup required', detail: 'Connect Supabase', tone: 'warning' }
@@ -528,8 +550,7 @@ export default function CashierPage() {
   function openNewOrderTab() {
     setOrderTabs((current) => {
       if (current.length >= MAX_OPEN_ORDER_TABS) return current
-      const nextIndex = Math.max(0, ...current.map((tab) => Number(tab.id.replace('WI-', '')) || 0)) + 1
-      const nextTab = createOrderTab(nextIndex)
+      const nextTab = createOrderTab(nextOrderTabId(current))
       setActiveOrderId(nextTab.id)
       return [...current, nextTab]
     })
@@ -541,7 +562,7 @@ export default function CashierPage() {
     if (target.cart.length && !window.confirm(`Close ${target.id}? This order has items in the cart.`)) return
     setOrderTabs((current) => {
       if (current.length === 1) {
-        const fresh = createOrderTab(1)
+        const fresh = createOrderTab()
         setActiveOrderId(fresh.id)
         return [fresh]
       }
@@ -629,7 +650,7 @@ export default function CashierPage() {
         vatRate: pricing.vatRate,
         pricesIncludeVat: pricing.pricesIncludeVat,
         discountSubtotal,
-        cashierName: cashierProfile?.full_name || cashierProfile?.username || cashierProfile?.email || 'Cashier',
+        cashierName: cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier',
         total,
         createdAt: new Date().toISOString(),
         items: cart.map((item) => {
@@ -678,9 +699,17 @@ export default function CashierPage() {
         status: 'paid',
         paid_at: new Date().toISOString(),
       }
-      const { data: savedOrder, error: orderError } = await supabase.rpc('create_cashier_order', {
+      let checkoutResult = await supabase.rpc('create_cashier_order', {
         request_payload: { order: orderPayload, items: orderItems, payment: paymentPayload },
       })
+      const isOrderNumberConflict = checkoutResult.error?.code === '23505' && /orders_order_number_key|order_number/i.test(checkoutResult.error?.message || '')
+      if (isOrderNumberConflict) {
+        const retryOrderPayload = { ...orderPayload, order_number: localIdentifier('WI') }
+        checkoutResult = await supabase.rpc('create_cashier_order', {
+          request_payload: { order: retryOrderPayload, items: orderItems, payment: paymentPayload },
+        })
+      }
+      const { data: savedOrder, error: orderError } = checkoutResult
       if (orderError || !savedOrder) {
         setError(`Order was not saved: ${orderError?.message || 'The server returned no order.'}`)
         return false
@@ -747,8 +776,8 @@ export default function CashierPage() {
     <div className={`cashier-v2 legacy-cashier ${isFullscreen ? 'cashier-is-fullscreen' : ''}`}>
       <header className="legacy-cashier-top">
         <div className="cashier-top-left">
-          <span className="cashier-brand-mark" aria-hidden="true">HM</span>
-          <div><span className="cashier-kicker">HM POS</span><strong className="cashier-welcome-name">Welcome Cashier, {cashierUsername}!</strong></div>
+          {storeInfo.logoUrl ? <img className="cashier-brand-mark cashier-brand-logo" src={storeInfo.logoUrl} alt=""/> : <span className="cashier-brand-mark" aria-hidden="true">{storeInitials}</span>}
+          <div><span className="cashier-kicker">{storeInfo.name || 'HM POS'}</span><strong className="cashier-welcome-name">Welcome Cashier, {cashierUsername}!</strong></div>
           <span
             className={`cashier-connection-status is-${cashierStatus.tone}`}
             role="status"
@@ -787,7 +816,6 @@ export default function CashierPage() {
               selectedTransactionId={transactionDetails?.id}
               onViewDetails={openTransactionDetails}
               onOpenReceipt={(order) => setReceipt(order)}
-              onClose={returnToPos}
             />
           </section>
           <aside className="legacy-ticket cashier-transaction-detail-panel" aria-label="Transaction details">
@@ -817,7 +845,7 @@ export default function CashierPage() {
               <div className="cashier-order-tabs-list">
                 {orderTabs.map((tab) => <div className={`cashier-order-tab ${tab.id === activeOrderId ? 'active' : ''}`} key={tab.id}>
                   <button type="button" className="cashier-tab-select" onClick={() => setActiveOrderId(tab.id)}>{tab.id}</button>
-                  <button type="button" className="cashier-tab-close" onClick={() => closeOrderTab(tab.id)} aria-label={`Close ${tab.id}`}>&times;</button>
+                  <button type="button" className="cashier-tab-close" onClick={() => closeOrderTab(tab.id)} aria-label={`Close ${tab.id}`} title={`Close ${tab.id}`}>&times;</button>
                 </div>)}
               </div>
             </div>
@@ -840,7 +868,7 @@ export default function CashierPage() {
             <div className="cashier-cart-count"><span>Items</span><b>{cartCount}</b></div>
             <POSCart cart={cart} onQty={changeQty} onEdit={editCartItem} />
             <div className="cashier-checkout-block">
-              <OrderSummary subtotal={subtotal} total={total} vatRate={pricing.vatRate} pricesIncludeVat={pricing.pricesIncludeVat} breakdown={priceBreakdown} />
+              <OrderSummary subtotal={subtotal} total={total} breakdown={priceBreakdown} />
               {error ? <div className="cashier-error">{error}</div> : null}
               <button type="button" className="legacy-charge" onClick={() => setShowCheckout(true)} disabled={!cart.length}>Checkout</button>
             </div>
@@ -853,7 +881,7 @@ export default function CashierPage() {
       </div> : null}
       <LogoutConfirmModal open={logoutOpen} busy={loggingOut} onCancel={() => setLogoutOpen(false)} onConfirm={logout} />
 
-      {showCheckout ? <CheckoutModal cart={cart} total={total} vatRate={pricing.vatRate} pricesIncludeVat={pricing.pricesIncludeVat} discount={discount} breakdown={priceBreakdown} setDiscount={setDiscount} payment={payment} setPayment={setPayment} change={change} error={error} saving={savingOrder} onCancel={() => { if (!savingOrder) { setShowCheckout(false); setError('') } }} onConfirm={async () => { if (await saveOrder()) setShowCheckout(false) }} /> : null}
+      {showCheckout ? <CheckoutModal cart={cart} total={total} discount={discount} breakdown={priceBreakdown} setDiscount={setDiscount} payment={payment} setPayment={setPayment} change={change} error={error} saving={savingOrder} onCancel={() => { if (!savingOrder) { setShowCheckout(false); setError('') } }} onConfirm={async () => { if (await saveOrder()) setShowCheckout(false) }} /> : null}
       {customizingProduct ? <ItemCustomizationModal product={customizingProduct} onClose={() => setCustomizingProduct(null)} onAdd={(customizations, addons, quantity) => { updateConfiguredItem(customizingProduct, customizations, addons, quantity); setCustomizingProduct(null) }} /> : null}
       {receipt ? <CashierReceipt order={receipt} onClose={() => setReceipt(null)} /> : null}
     </div>
@@ -1036,35 +1064,28 @@ function PaymentPanel({ payment, setPayment, total, change }) {
   return <section className="cashier-panel"><div className="cashier-payment-methods">{paymentMethods.map(({ value, label, icon: Icon }) => <button type="button" className={payment.method === value ? 'active' : ''} key={value} onClick={() => setPayment((current) => ({ ...current, method: value }))}><Icon size={18} /> {label}</button>)}</div>{payment.method === 'Cash' ? <div className="cashier-form-grid"><input type="number" min={total} step="0.01" value={payment.cashReceived} onChange={(event) => setPayment((current) => ({ ...current, cashReceived: event.target.value }))} placeholder="Cash received" /><input readOnly value={`Change: ${peso(change)}`} /></div> : null}{payment.method === 'GCash' ? <div className="cashier-form-grid"><input inputMode="numeric" maxLength={11} pattern="09[0-9]{9}" title="Enter 11 digits starting with 09." value={payment.accountNumber} onChange={(event) => setPayment((current) => ({ ...current, accountNumber: sanitizePhone(event.target.value) }))} placeholder="09XXXXXXXXX" /><input value={payment.referenceNumber} onChange={(event) => setPayment((current) => ({ ...current, referenceNumber: event.target.value.replace(/\D/g, '').slice(0, 13) }))} placeholder="13-digit reference" /></div> : null}{payment.method === 'Bank Transfer' ? <div className="cashier-form-grid"><input maxLength={80} value={payment.bankName} onChange={(event) => setPayment((current) => ({ ...current, bankName: event.target.value.slice(0, 80) }))} placeholder="Bank name" /><input value={payment.referenceNumber} onChange={(event) => setPayment((current) => ({ ...current, referenceNumber: event.target.value.replace(/[^A-Za-z0-9-]/g, '').slice(0, 30) }))} placeholder="Transfer reference" /></div> : null}</section>
 }
 
-function CashierBreakdownRows({ breakdown, vatRate, pricesIncludeVat }) {
+function CashierBreakdownRows({ breakdown }) {
   if (breakdown?.isVatExemptDiscount) {
     return <>
-      {breakdown.regularBaseAmount > 0 ? <p><span>VATable Sale</span><b>{peso(breakdown.regularBaseAmount)}</b></p> : null}
-      <p><span>VAT-Exempt Sale</span><b>{peso(breakdown.vatExemptSale)}</b></p>
-      <p className="cashier-vat-indicator"><span>{formatVatRate(vatRate)} VAT</span><b>{peso(breakdown.regularVatAmount)}</b></p>
-      <p><span>Less 20% SC/PWD Disc.</span><b>-{peso(breakdown.discountAmount)}</b></p>
+      <p><span>Subtotal</span><b>{peso(breakdown.baseAmount)}</b></p>
+      <p><span>Discount</span><b>-{peso(breakdown.discountAmount)}</b></p>
     </>
   }
 
-  return <>
-    <p><span>Subtotal</span><b>{peso(breakdown?.baseAmount || 0)}</b></p>
-    <p className="cashier-vat-indicator"><span>{pricesIncludeVat ? `VAT included (${formatVatRate(vatRate)})` : 'VAT calculated at checkout'}</span><b>{peso(breakdown?.vatAmount || 0)}</b></p>
-  </>
+  return <p><span>Subtotal</span><b>{peso(breakdown?.baseAmount || 0)}</b></p>
 }
 
-function OrderSummary({ subtotal, total, vatRate, pricesIncludeVat, breakdown }) {
+function OrderSummary({ subtotal, total, breakdown }) {
   const summary = breakdown || cartVatBreakdown({
     subtotal,
     discount: { enabled: false },
     discountBreakdown: {},
-    vatRate,
-    pricesIncludeVat,
   })
-  return <div className="legacy-ticket-total"><CashierBreakdownRows breakdown={summary} vatRate={vatRate} pricesIncludeVat={pricesIncludeVat} /><hr /><p><strong>Total</strong><strong>{peso(total)}</strong></p></div>
+  return <div className="legacy-ticket-total"><CashierBreakdownRows breakdown={summary} /><hr /><p><strong>Total</strong><strong>{peso(total)}</strong></p></div>
 }
 
 
-function CheckoutModal({ cart, total, vatRate, pricesIncludeVat, discount, breakdown, setDiscount, payment, setPayment, change, error, saving, onCancel, onConfirm }) {
+function CheckoutModal({ cart, total, discount, breakdown, setDiscount, payment, setPayment, change, error, saving, onCancel, onConfirm }) {
   const discountChoices = ['No Discount', 'PWD', 'Senior']
   const paymentChoices = [
     { value: 'Cash', label: 'Cash', icon: Banknote },
@@ -1114,7 +1135,7 @@ function CheckoutModal({ cart, total, vatRate, pricesIncludeVat, discount, break
             </label>
           })}
         </section>
-        <section className="checkout-totals"><CashierBreakdownRows breakdown={breakdown} vatRate={vatRate} pricesIncludeVat={pricesIncludeVat} /><p><strong>Total</strong><strong>{peso(total)}</strong></p></section>
+        <section className="checkout-totals"><CashierBreakdownRows breakdown={breakdown} /><p><strong>Total</strong><strong>{peso(total)}</strong></p></section>
         <section className="checkout-section"><h3>Discount</h3><div className="checkout-choice-grid">{discountChoices.map((choice) => <button type="button" key={choice} className={activeDiscount === choice ? 'active' : ''} onClick={() => chooseDiscount(choice)}>{choice}</button>)}</div>
           {discount.enabled ? <div className="checkout-field-grid"><label>Name<input autoComplete="name" maxLength={60} value={discount.customerName} onChange={(event) => setDiscount((current) => ({ ...current, customerName: sanitizePersonName(event.target.value, 60) }))} placeholder="Customer name" /></label><label>ID number<input inputMode="text" autoComplete="off" maxLength={32} value={discount.idNumber} onChange={(event) => setDiscount((current) => ({ ...current, idNumber: event.target.value }))} placeholder="PWD or senior ID" /></label></div> : null}
         </section>
@@ -1129,7 +1150,7 @@ function CheckoutModal({ cart, total, vatRate, pricesIncludeVat, discount, break
     </section>
   </div>
 }
-function CashierTransactionsView({ transactions, selectedTransactionId, onViewDetails, onOpenReceipt, onClose }) {
+function CashierTransactionsView({ transactions, selectedTransactionId, onViewDetails, onOpenReceipt }) {
   const [query, setQuery] = useState('')
   const [paymentFilter, setPaymentFilter] = useState('All')
   const [periodFilter, setPeriodFilter] = useState('All time')
@@ -1163,7 +1184,6 @@ function CashierTransactionsView({ transactions, selectedTransactionId, onViewDe
   return <div className="cashier-transactions-view" aria-labelledby="transactions-title">
       <header>
         <div><span>Cashier records</span><h1 id="transactions-title">Transaction History</h1><p>Review recent walk-in orders and open a record for more detail.</p></div>
-        <button type="button" onClick={onClose} aria-label="Back to point of sale"><ShoppingBag size={16} /> <span>Back to POS</span></button>
       </header>
       <div className="transaction-toolbar">
         <label className="transaction-search"><Search size={18} /><input aria-label="Search order, customer, or payment" value={query} onChange={(event) => setQuery(event.target.value.slice(0, 100))} maxLength={100} placeholder="Search order, customer, or payment" /></label>
@@ -1177,9 +1197,7 @@ function CashierTransactionsView({ transactions, selectedTransactionId, onViewDe
 
 function TransactionDetailsView({ order, onBack }) {
   const items = order.items || []
-  const vatRate = order.vatRate ?? 0.12
-  const pricesIncludeVat = order.pricesIncludeVat !== false
-  const breakdown = storedOrderVatBreakdown(order, vatRate, pricesIncludeVat)
+  const breakdown = storedOrderVatBreakdown(order)
   const hasDiscount = breakdown.isVatExemptDiscount
   const paymentDetails = [
     ...(order.receiptNumber ? [['Receipt reference', order.receiptNumber]] : []),
@@ -1196,7 +1214,7 @@ function TransactionDetailsView({ order, onBack }) {
         <div className="detail-meta"><div><span>Date</span><b>{formatReceiptDate(order.createdAt)}</b></div><div><span>Payment</span><b>{order.paymentMethod}</b></div></div>
         <section><h3>Items</h3><div className="detail-items">{items.length ? items.map((item, index) => <article key={item.lineKey || item.id || index}><div><b>{item.name || item.product_name || item.item_name || 'Menu item'}</b><span>{customizationDetails(item).join(' / ') || 'Standard preparation'}</span></div><span>&times;{item.qty || item.quantity || 0}</span><strong>{peso(item.line_total || itemLineTotal(item))}</strong></article>) : <p>No item details are available for this transaction.</p>}</div></section>
         <section className="detail-summary"><h3>Payment details</h3>{paymentDetails.length ? <div>{paymentDetails.map(([label, value]) => <p key={label}><span>{label}</span><b>{value}</b></p>)}</div> : <p>Payment details are not available for this transaction.</p>}</section>
-        <section className="detail-summary"><h3>Order summary</h3><div><CashierBreakdownRows breakdown={breakdown} vatRate={vatRate} pricesIncludeVat={pricesIncludeVat} />{hasDiscount ? <>{order.discountCustomerName ? <p><span>Discount name</span><b>{order.discountCustomerName}</b></p> : null}{order.discountIdNumber ? <p><span>Discount ID</span><b>{order.discountIdNumber}</b></p> : null}</> : <p><span>Discount</span><b>No discount</b></p>}</div></section>
+        <section className="detail-summary"><h3>Order summary</h3><div><CashierBreakdownRows breakdown={breakdown} />{hasDiscount ? <>{order.discountCustomerName ? <p><span>Discount name</span><b>{order.discountCustomerName}</b></p> : null}{order.discountIdNumber ? <p><span>Discount ID</span><b>{order.discountIdNumber}</b></p> : null}</> : <p><span>Discount</span><b>No discount</b></p>}</div></section>
         <div className="detail-total"><span>Total</span><strong>{peso(order.total)}</strong></div>
       </div>
     </section>
@@ -1226,12 +1244,10 @@ function receiptPaymentRows(order) {
 }
 
 function CashierReceipt({ order, onClose }) {
-  const { pricing } = usePricing()
+  const receiptStore = useStoreInfo()
   const itemCount = (order.items || []).reduce((sum, item) => sum + Number(item.qty || item.quantity || 0), 0)
   const cashierName = order.cashierName || 'Cashier'
-  const vatRate = order.vatRate ?? pricing.vatRate
-  const pricesIncludeVat = order.pricesIncludeVat ?? pricing.pricesIncludeVat
-  const breakdown = storedOrderVatBreakdown(order, vatRate, pricesIncludeVat)
+  const breakdown = storedOrderVatBreakdown(order)
   return <div className="cashier-receipt-backdrop">
     <section className="cashier-receipt-modal" role="dialog" aria-modal="true" aria-label="Receipt preview">
       <header className="cashier-receipt-modal-head">
@@ -1239,14 +1255,7 @@ function CashierReceipt({ order, onClose }) {
       </header>
       <div className="receipt-preview-shell">
         <div className="receipt-print-area">
-          <div className="receipt-header">
-            <span className="receipt-logo receipt-logo-text" aria-hidden="true">HM</span>
-            <div className="receipt-store-name">{receiptStore.name}</div>
-            {receiptStore.branch ? <div className="receipt-store-info">{receiptStore.branch}</div> : null}
-            {receiptStore.address ? <div className="receipt-store-info">{receiptStore.address}</div> : null}
-            {receiptStore.phone ? <div className="receipt-store-info">{receiptStore.phone}</div> : null}
-            {receiptStore.tin ? <div className="receipt-store-info">TIN ID: {receiptStore.tin}</div> : null}
-          </div>
+          <StoreReceiptBrand store={receiptStore}/>
           <div className="receipt-line" />
           <div className="receipt-row"><span className="receipt-label">Order #:</span><span className="receipt-value">{order.orderNumber}</span></div>
           <div className="receipt-row"><span className="receipt-label">Reference #:</span><span className="receipt-value">{order.receiptNumber || 'N/A'}</span></div>
@@ -1269,7 +1278,8 @@ function CashierReceipt({ order, onClose }) {
             })}
           </div>
           <div className="receipt-line" />
-          {breakdown.isVatExemptDiscount ? <>{breakdown.regularBaseAmount > 0 ? <div className="receipt-total-row"><span>VATable Sale:</span><span>{breakdown.regularBaseAmount.toFixed(2)}</span></div> : null}<div className="receipt-total-row"><span>VAT-Exempt Sale:</span><span>{breakdown.vatExemptSale.toFixed(2)}</span></div><div className="receipt-total-row"><span>{formatVatRate(vatRate)} VAT:</span><span>{breakdown.regularVatAmount.toFixed(2)}</span></div><div className="receipt-total-row"><span>Less 20% SC/PWD Disc.:</span><span>-{breakdown.discountAmount.toFixed(2)}</span></div></> : <><div className="receipt-total-row"><span>Subtotal:</span><span>{breakdown.baseAmount.toFixed(2)}</span></div><div className="receipt-total-row"><span>VAT ({formatVatRate(vatRate)}):</span><span>{breakdown.vatAmount.toFixed(2)}</span></div></>}
+          <div className="receipt-total-row"><span>Subtotal:</span><span>{breakdown.baseAmount.toFixed(2)}</span></div>
+          {breakdown.isVatExemptDiscount ? <div className="receipt-total-row"><span>Discount:</span><span>-{breakdown.discountAmount.toFixed(2)}</span></div> : null}
           <div className="receipt-total-row"><span>TOTAL:</span><span className="receipt-grand-total">{Number(order.total || 0).toFixed(2)}</span></div>
           <div className="receipt-line" />
           <div className="receipt-row"><span className="receipt-label">Payment Method:</span><span className="receipt-value">{order.paymentMethod}</span></div>
@@ -1278,7 +1288,7 @@ function CashierReceipt({ order, onClose }) {
           <div className="receipt-line" />
           <div className="receipt-row"><span className="receipt-label">Items:</span><span className="receipt-value">{itemCount}</span></div>
           <div className="receipt-line" />
-          <div className="receipt-footer">Thank you for choosing {receiptStore.name},<br />Have a great day!</div>
+          <StoreReceiptFooter store={receiptStore}/>
           <div className="receipt-line" />
         </div>
       </div>

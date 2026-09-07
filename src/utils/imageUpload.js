@@ -39,7 +39,7 @@ export async function validateImageFile(file, { label = 'Image', maxBytes = IMAG
   if (!file) throw new Error(`Choose a ${label.toLowerCase()} to upload.`)
   if (!CANONICAL_EXTENSIONS[file.type]) throw new Error(`${label} must be a JPG, PNG, or WEBP image. GIFs, videos, and documents are not allowed.`)
   if (!file.size) throw new Error(`${label} cannot be empty.`)
-  if (file.size > maxBytes) throw new Error(`${label} must be 5 MB or smaller.`)
+  if (file.size > maxBytes) throw new Error(`${label} must be ${Math.round(maxBytes / (1024 * 1024))} MB or smaller.`)
 
   const filenameExtension = String(file.name || '').split('.').pop()?.toLowerCase()
   if (!filenameExtension || !MIME_EXTENSIONS[file.type].includes(filenameExtension)) {

@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { normalizeRole, roleRoutes, signInPortal } from '../lib/auth'
 import { queueAuthWelcome } from '../lib/authFeedback'
 import { EMAIL_MAX_LENGTH } from '../utils/inputValidation'
+import useStoreInfo from '../hooks/useStoreInfo'
 
 const roleOptions = [
   {
@@ -28,6 +29,7 @@ const roleOptions = [
 ]
 
 export default function PortalLoginPage() {
+  const storeInfo = useStoreInfo()
   const [role, setRole] = useState('admin')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -53,7 +55,7 @@ export default function PortalLoginPage() {
       const { profile } = await signInPortal({ identifier, password, role })
       const normalizedRole = normalizeRole(profile.role || role)
       const target = location.state?.from || roleRoutes[normalizedRole] || roleRoutes[role] || '/portal'
-      queueAuthWelcome(profile)
+      queueAuthWelcome(profile, { storeName: storeInfo.name })
       navigate(target, { replace: true })
     } catch (error) {
       setMessage(error.message || 'Unable to sign in. Check your credentials and selected access level.')
@@ -64,13 +66,14 @@ export default function PortalLoginPage() {
 
   return (
     <main className="staff-portal">
-      <section className="staff-portal__brand-panel" aria-label="HM POS staff portal">
+      <section className="staff-portal__brand-panel" aria-label={`${storeInfo.name || 'HM POS'} staff portal`}>
         <span className="staff-portal__secure-label"><LockKeyhole size={15} aria-hidden="true" /> Secure access</span>
 
         <div className="staff-portal__brand-focus">
-          <a className="staff-portal__brand" href="/portal" aria-label="HM POS staff portal">
+          <a className="staff-portal__brand" href="/portal" aria-label={`${storeInfo.name || 'HM POS'} staff portal`}>
+            {storeInfo.logoUrl ? <img className="staff-portal__brand-logo" src={storeInfo.logoUrl} alt=""/> : null}
             <span>
-              <strong>HM POS</strong>
+              <strong>{storeInfo.name || 'HM POS'}</strong>
               <small>Staff workspace</small>
             </span>
           </a>
@@ -78,19 +81,19 @@ export default function PortalLoginPage() {
 
         <footer className="staff-portal__brand-footer">
           <span><ShieldCheck size={16} aria-hidden="true" /> Authorized staff only</span>
+          <small>© {new Date().getFullYear()} {storeInfo.name || 'HM POS'}. All rights reserved.</small>
         </footer>
       </section>
 
       <section className="staff-portal__form-panel" aria-labelledby="staff-login-title">
         <div className="staff-portal__mobile-brand">
-          <span><strong>HM POS</strong><small>Staff workspace</small></span>
+          {storeInfo.logoUrl ? <img className="staff-portal__mobile-logo" src={storeInfo.logoUrl} alt=""/> : null}<span><strong>{storeInfo.name || 'HM POS'}</strong><small>Staff workspace</small></span>
         </div>
 
         <div className="staff-portal__form-wrap">
           <div className="staff-portal__form-header">
             <span className="staff-portal__form-kicker">Internal staff access</span>
             <h2 id="staff-login-title">Sign in to your workspace</h2>
-            <p>Select your access level, then use your staff account credentials.</p>
           </div>
 
           <form className="staff-portal__form" onSubmit={submit} aria-busy={loading} autoComplete="on">
@@ -117,15 +120,15 @@ export default function PortalLoginPage() {
             </fieldset>
 
             <div className="staff-portal__field">
-              <label className="staff-portal__field-label" htmlFor="portal-identifier">Work email</label>
+              <label className="staff-portal__field-label" htmlFor="portal-identifier">Email or username</label>
               <span className="staff-portal__input-wrap">
                 <UserRound size={18} aria-hidden="true" />
                 <input
                   id="portal-identifier"
                   name="identifier"
-                  type="email"
+                  type="text"
                   maxLength={EMAIL_MAX_LENGTH}
-                  placeholder="name@example.com"
+                  placeholder="Enter email or username"
                   required
                   autoComplete="username"
                   autoCapitalize="none"
@@ -170,7 +173,7 @@ export default function PortalLoginPage() {
           <p className="staff-portal__form-help">Need access help? Contact your administrator.</p>
         </div>
 
-        <footer className="staff-portal__mobile-footer"><ShieldCheck size={15} aria-hidden="true" /> Authorized staff only</footer>
+        <footer className="staff-portal__mobile-footer"><span><ShieldCheck size={15} aria-hidden="true" /> Authorized staff only</span><small>© {new Date().getFullYear()} {storeInfo.name || 'HM POS'}</small></footer>
       </section>
     </main>
   )

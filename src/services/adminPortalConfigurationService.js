@@ -29,7 +29,7 @@ export const CONTENT_DEFAULTS = {
 export const SYSTEM_DEFAULTS = {
   store: {
     name: 'HM POS', email: '', phone: '',
-    address: '', timezone: 'Asia/Manila',
+    address: '', logoUrl: '', timezone: 'Asia/Manila',
   },
   ordering: {
     storeStatus: 'open', closureMessage: 'Online ordering is temporarily unavailable. Please check again later.',
@@ -109,6 +109,32 @@ export async function savePaymentConfiguration(settings, qrFiles = {}) {
     return { settings: next, row }
   } catch (error) {
     if (uploadedPaths.length) await supabase.storage.from('portal-assets').remove(uploadedPaths)
+    throw error
+  }
+}
+
+export async function saveStoreConfiguration(settings, logoFile = null) {
+  requireSupabase()
+  const next = { ...SYSTEM_DEFAULTS.store, ...settings }
+  const previousLogoPath = storagePathFromPublicUrl(next.logoUrl)
+  let uploadedPath = null
+  let replacedPath = next.logoUrl ? null : previousLogoPath
+  try {
+    if (logoFile) {
+      const { extension } = await validateImageFile(logoFile, { label: 'Store logo', maxBytes: 10 * 1024 * 1024 })
+      uploadedPath = `store-branding/logo-${crypto.randomUUID()}.${extension}`
+      const { error: uploadError } = await supabase.storage.from('portal-assets').upload(uploadedPath, logoFile, { contentType: logoFile.type, upsert: false })
+      if (uploadError) throw uploadError
+      const { data } = supabase.storage.from('portal-assets').getPublicUrl(uploadedPath)
+      if (!data?.publicUrl) throw new Error('The uploaded store logo URL could not be created.')
+      replacedPath = previousLogoPath
+      next.logoUrl = data.publicUrl
+    }
+    const row = await savePortalConfiguration('system', 'store', next, true)
+    if (replacedPath) await supabase.storage.from('portal-assets').remove([replacedPath])
+    return { settings: next, row }
+  } catch (error) {
+    if (uploadedPath) await supabase.storage.from('portal-assets').remove([uploadedPath])
     throw error
   }
 }

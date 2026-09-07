@@ -11,6 +11,7 @@ import {
   markStaffNotificationRead, subscribeToStaffNotifications,
 } from '../services/notificationCenterService'
 import { clearManagementSessionState, requestManagementDataRefresh, useManagementSessionState } from '../hooks/useManagementSessionState'
+import useStoreInfo from '../hooks/useStoreInfo'
 
 const adminGroups = [
   { label: 'Main', links: [['Dashboard','/admin', LayoutDashboard]] },
@@ -27,6 +28,7 @@ function notificationTime(value) {
 }
 
 export default function AppShell({ role, title, eyebrow, children, actions, titleActions, onRefresh, onNotifications, notificationCount = 0 }) {
+  const storeInfo = useStoreInfo()
   const groups = role === 'admin' ? adminGroups : []
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -49,8 +51,9 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join('') || 'ST'
+  const brandInitials = String(storeInfo.name || 'HM POS').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   const unreadNotificationCount = notifications.filter((item) => !item.read).length
-  const visibleNotificationCount = Math.max(notificationCount, unreadNotificationCount)
+  const visibleNotificationCount = role === 'admin' ? unreadNotificationCount : Math.max(notificationCount, unreadNotificationCount)
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000)
@@ -135,19 +138,34 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
     const add = (notification) => addStaffNotification(user.id, notification)
     const channel = supabase.channel(`management-notification-center-${user.id}`)
 
-    if (staffPreferences.notify_new_orders) channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, ({ new: order }) => add({
-      category: 'orders', title: 'New order received', message: order?.order_number ? `${order.order_number} entered the order queue.` : 'A new order entered the preparation queue.',
-    }))
-    if (staffPreferences.notify_low_stock) channel.on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, ({ new: stock }) => {
+    if (role === 'admin' || staffPreferences.notify_new_orders) channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'transactions' }, async ({ new: transaction }) => {
+      let cashierName = 'Cashier'
+      if (transaction?.order_id) {
+        const { data: order } = await supabase.from('orders').select('cashier_id').eq('id', transaction.order_id).maybeSingle()
+        if (order?.cashier_id) {
+          const { data: cashier } = await supabase.from('users').select('username,full_name').eq('id', order.cashier_id).maybeSingle()
+          cashierName = cashier?.username || cashier?.full_name || cashierName
+        }
+      }
+      add({ category: 'transactions', title: 'New transaction', message: `${cashierName} recorded ${transaction?.reference_number ? `payment ${transaction.reference_number}` : 'a new payment transaction'}.` })
+    })
+    if (role === 'admin' || staffPreferences.notify_low_stock) channel.on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, ({ eventType, new: stock }) => {
       const quantity = Number(stock?.quantity)
       const minimum = Number(stock?.min_stock_level)
-      if (!Number.isFinite(quantity) || !Number.isFinite(minimum) || minimum <= 0 || quantity > minimum) return
-      add({ category: 'inventory', title: quantity <= 0 ? 'Item out of stock' : 'Low stock detected', message: `Stock is at ${quantity}; the low stock indicator is ${minimum}.` })
+      if (Number.isFinite(quantity) && Number.isFinite(minimum) && minimum > 0 && quantity <= minimum) {
+        add({ category: 'inventory', title: quantity <= 0 ? 'Item out of stock' : 'Low stock detected', message: `Stock is at ${quantity}; the low-stock level is ${minimum}.` })
+      } else if (role === 'admin' && eventType === 'UPDATE') {
+        add({ category: 'inventory', title: 'Stock updated', message: Number.isFinite(quantity) ? `Available quantity is now ${quantity}.` : 'An inventory record was updated.' })
+      }
     })
-    if (staffPreferences.notify_menu_changes) channel.on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, ({ eventType, new: item, old }) => {
+    if (role === 'admin' || staffPreferences.notify_menu_changes) channel.on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, ({ eventType, new: item, old }) => {
       const name = item?.name || old?.name || 'A menu item'
       const action = eventType === 'INSERT' ? 'was added' : eventType === 'DELETE' ? 'was removed' : 'was updated'
-      add({ category: 'menu', title: 'Menu changed', message: `${name} ${action}.` })
+      add({ category: 'menu', title: eventType === 'INSERT' ? 'New menu item' : 'Menu updated', message: `${name} ${action}.` })
+    })
+    if (role === 'admin') channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, ({ new: account }) => {
+      if (account?.role !== 'cashier' && account?.role !== 'staff') return
+      add({ category: 'accounts', title: 'New cashier account', message: `${account?.username || account?.full_name || account?.email || 'A cashier'} can now access the cashier workspace.` })
     })
 
     channel.subscribe()
@@ -189,7 +207,7 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
 
   return <div className={`app-layout legacy-${role}${mobileMenuOpen ? ' is-mobile-menu-open' : ''}`} data-theme="light" data-staff-density={staffPreferences.table_density} data-staff-contrast={String(staffPreferences.high_contrast)} data-staff-overdue={role === 'staff' ? String(staffPreferences.overdue_highlighting) : undefined}>
     <aside className="sidebar internal-sidebar" id="management-mobile-drawer" aria-label={`${role} workspace`}>
-      <div className="internal-brand"><span className="internal-brand-mark" aria-hidden="true">HM</span><div><h2>HM POS</h2></div>{role === 'admin' && <button type="button" className="internal-drawer-close" onClick={() => setMobileMenuOpen(false)} aria-label="Close navigation menu"><X size={20} /></button>}</div>
+      <div className="internal-brand">{storeInfo.logoUrl ? <img className="internal-brand-mark internal-brand-logo" src={storeInfo.logoUrl} alt=""/> : <span className="internal-brand-mark" aria-hidden="true">{brandInitials}</span>}<div><h2>{storeInfo.name || 'HM POS'}</h2></div>{role === 'admin' && <button type="button" className="internal-drawer-close" onClick={() => setMobileMenuOpen(false)} aria-label="Close navigation menu"><X size={20} /></button>}</div>
       <nav aria-label={`${role} navigation`}>{groups.map(group => <div className="internal-nav-group" key={group.label || group.links[0][1]}>{group.label && <span className="internal-group-label">{group.label}</span>}{group.links.map(([label,to,Icon]) => <NavLink key={to} to={to} end={to === `/${role}`} title={label}>{Icon && <Icon size={18} aria-hidden="true" />}<span>{label}</span></NavLink>)}</div>)}</nav>
       <div className="sidebar-footer-stack">
         <button type="button" className="sidebar-staff-profile" onClick={() => navigate('/admin/users-access/users')} title={`Open profile for ${accountDisplayName}`} aria-label={`Open profile for ${accountDisplayName}, ${accountRoleLabel}`}>

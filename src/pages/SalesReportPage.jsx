@@ -15,6 +15,7 @@ import {
   fetchSalesReportData, ORDER_TYPE_LABEL, PAYMENT_LABEL, printSalesReportPdf,
 } from '../services/salesReportService'
 import { hasManagementSessionState, useManagementSessionState } from '../hooks/useManagementSessionState'
+import { addCurrentUserNotification } from '../services/notificationCenterService'
 import '../sales-report.css'
 
 const PERIOD_OPTIONS = [
@@ -327,6 +328,7 @@ export default function SalesReportPage() {
     anchor.download = `sales-report-${dateInputValue(applied.from)}-to-${dateInputValue(applied.to)}.csv`
     anchor.click()
     URL.revokeObjectURL(url)
+    void addCurrentUserNotification({ category: 'exports', title: 'CSV downloaded', message: `Sales report exported with ${filteredOrders.length} order${filteredOrders.length === 1 ? '' : 's'}.` })
     pushToast('success', `Exported ${filteredOrders.length} order${filteredOrders.length === 1 ? '' : 's'} to CSV.`)
     setExportMenuOpen(false)
   }

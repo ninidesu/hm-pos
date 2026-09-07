@@ -13,6 +13,7 @@ export default function AuthUiLayer() {
     setWelcome((current) => current?.token === nextWelcome.token ? current : {
       id: `${location.key || location.pathname}-${nextWelcome.token}`,
       name: nextWelcome.name,
+      storeName: nextWelcome.storeName,
       token: nextWelcome.token,
     })
   }, [location.key, location.pathname])

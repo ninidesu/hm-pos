@@ -6,16 +6,19 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
+import TablePagination from '../components/TablePagination'
 import { useAuth } from '../context/AuthContext'
 import { saveStaffUsername } from '../services/staffSettingsService'
+import { addCurrentUserNotification } from '../services/notificationCenterService'
 import { describeError } from '../utils/describeError'
 import { EMAIL_MAX_LENGTH, isValidEmail, sanitizePersonName, sanitizeUsername } from '../utils/inputValidation'
 import {
-  PORTAL_ROLES, downloadAuditCsv, fetchManagedUsers, fetchPortalAuditEvents,
+  PORTAL_ROLES, downloadAuditCsv, fetchManagedUsers, fetchPortalAuditEvents, fetchUserRecentActivity,
   fetchPortalAuditExport, invitePortalUser, removePortalUser, updatePortalUser, updatePortalUserRole,
 } from '../services/usersAccessService'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
+const USER_TABLE_PAGE_SIZE = 10
 const MODULE_OPTIONS = ['users_access', 'inventory', 'menu', 'orders', 'transactions', 'refunds', 'content', 'settings']
 
 function displayRole(role) {
@@ -69,6 +72,7 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
   const [selected, setSelected] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
   const [toast, setToast] = useState(null)
+  const [page, setPage] = useState(1)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -103,6 +107,10 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
     admins: users.filter((item) => ['admin', 'manager'].includes(item.role)).length,
     cashiers: users.filter((item) => item.role === 'cashier').length,
   }), [users])
+  const pageCount = Math.max(1, Math.ceil(filtered.length / USER_TABLE_PAGE_SIZE))
+  const pagedUsers = useMemo(() => filtered.slice((page - 1) * USER_TABLE_PAGE_SIZE, page * USER_TABLE_PAGE_SIZE), [filtered, page])
+  useEffect(() => { setPage(1) }, [query, role, sort])
+  useEffect(() => { if (page > pageCount) setPage(pageCount) }, [page, pageCount])
 
   const clearFilters = () => { setQuery(''); setRole('all'); setSort('name') }
   const refreshAfterChange = async (message) => { await load(); setToast({ tone: 'success', message }) }
@@ -134,14 +142,15 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
       <div className="ua-table-wrap">
         <table className="ua-table">
           <thead><tr><th>User</th><th>Role</th><th>Last active</th><th>Created</th><th><span className="sr-only">Actions</span></th></tr></thead>
-          <tbody>{filtered.map((item) => <tr key={item.id}>
+          <tbody>{pagedUsers.map((item) => <tr key={item.id}>
             <td><UserIdentity user={item}/></td><td>{item.roleLabel}</td>
             <td>{formatDateTime(item.last_active_at || item.updated_at)}</td><td>{formatDateTime(item.created_at)}</td>
             <td><button type="button" className="ua-row-action" onClick={() => setSelected(item)}>View</button></td>
           </tr>)}</tbody>
         </table>
       </div>
-      <div className="ua-mobile-list">{filtered.map((item) => <button type="button" className="ua-user-card" key={item.id} onClick={() => setSelected(item)}><UserIdentity user={item}/><span>{item.roleLabel}</span></button>)}</div>
+      <div className="ua-mobile-list">{pagedUsers.map((item) => <button type="button" className="ua-user-card" key={item.id} onClick={() => setSelected(item)}><UserIdentity user={item}/><span>{item.roleLabel}</span></button>)}</div>
+      {filtered.length > 0 && <TablePagination page={page} pageSize={USER_TABLE_PAGE_SIZE} total={filtered.length} onPageChange={setPage} label="users"/>}
       {!filtered.length && <EmptyState icon={Users} title="No users found" message="Adjust the search or filters to see more accounts."/>}
     </>}
 
@@ -153,8 +162,8 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
 }
 
 function UserIdentity({ user }) {
-  const name = user.full_name || user.username || user.email || 'Unnamed user'
-  return <div className="ua-user-identity"><span aria-hidden="true">{initials(name)}</span><div><b>{name}</b><small>{user.username ? `@${user.username} · ${user.email}` : user.email}</small></div></div>
+  const name = user.username || user.full_name || user.email || 'Unnamed user'
+  return <div className="ua-user-identity"><span aria-hidden="true">{initials(name)}</span><div><b>{name}</b><small>{user.email}</small></div></div>
 }
 
 function InviteUserModal({ open, onClose, onSuccess }) {
@@ -197,7 +206,7 @@ function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
     setRole(user.role === 'manager' ? 'admin' : PORTAL_ROLES.some((item) => item.value === user.role) ? user.role : 'cashier')
     setError('')
     setRemoveOpen(false)
-    fetchPortalAuditEvents({ actorId: user.id }, { pageSize: 6 }).then(({ events }) => setRecent(events)).catch(() => setRecent([]))
+    fetchUserRecentActivity(user.id, 4).then(setRecent).catch(() => setRecent([]))
   }, [user])
   if (!user) return null
   const isSelf = user.id === currentUserId
@@ -208,7 +217,7 @@ function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
     finally { setBusy(false) }
   }
   return <><button className="ua-drawer-scrim" onClick={onClose} aria-label="Close user details"/><aside className="ua-drawer" role="dialog" aria-modal="true" aria-labelledby="user-drawer-title">
-    <header><div><span className="ua-drawer-avatar">{initials(user.full_name || user.email)}</span><div><h2 id="user-drawer-title">{user.full_name || user.email}</h2><p>{user.email}</p></div></div><button autoFocus type="button" onClick={onClose} aria-label="Close user details"><X/></button></header>
+    <header><div><span className="ua-drawer-avatar">{initials(user.username || user.full_name || user.email)}</span><div><h2 id="user-drawer-title">{user.username || user.full_name || user.email}</h2><p>{user.email}</p></div></div><button autoFocus type="button" onClick={onClose} aria-label="Close user details"><X/></button></header>
     <div className="ua-drawer-body">
       <section><div className="ua-section-heading"><ShieldCheck size={18}/><div><h3>Access controls</h3><p>Changes take effect the next time access is checked.</p></div></div>
         <label className="ua-field"><span>Portal role</span><select value={role} onChange={(event) => setRole(event.target.value)} disabled={isSelf}>{PORTAL_ROLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
@@ -289,7 +298,7 @@ function RemoveUserConfirm({ open, user, onClose, onRemoved }) {
     catch (cause) { setError(describeError(cause, 'Could not remove this user. Please try again.')) }
     finally { setBusy(false) }
   }
-  const name = user.full_name || user.username || user.email
+  const name = user.username || user.full_name || user.email
   return <div className="ua-overlay ua-confirm-overlay" onMouseDown={busy ? undefined : onClose}>
     <section className="ua-modal ua-confirm-modal" onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true" aria-labelledby="remove-user-title" aria-describedby="remove-user-description">
       <header><div><span className="ua-modal-icon ua-modal-icon--danger"><Trash2 size={20}/></span><div><h2 id="remove-user-title">Remove {name}?</h2><p>Confirm permanent portal removal.</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close remove user confirmation"><X/></button></header>
@@ -327,7 +336,7 @@ export function ActivityLogsModule({ refreshSignal }) {
 
   const exportCsv = useCallback(async () => {
     setExporting(true)
-    try { downloadAuditCsv(await fetchPortalAuditExport(filters)); setError('') }
+    try { const records = await fetchPortalAuditExport(filters); downloadAuditCsv(records); await addCurrentUserNotification({ category: 'exports', title: 'CSV downloaded', message: `Portal activity was exported with ${records.length} record${records.length === 1 ? '' : 's'}.` }); setError('') }
     catch (cause) { setError(describeError(cause, 'Could not export activity.')) }
     finally { setExporting(false) }
   }, [filters])

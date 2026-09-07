@@ -233,7 +233,7 @@ create table if not exists public.portal_configuration (
 
 insert into public.portal_configuration (scope, key, value, is_public)
 values
-  ('system', 'pricing', '{"vatRate":0.12,"pricesIncludeVat":true,"currency":"PHP","version":1}'::jsonb, false),
+  ('system', 'pricing', '{"vatRate":0,"pricesIncludeVat":false,"currency":"PHP","version":2}'::jsonb, false),
   ('system', 'payments', '{"enabledMethods":["cash","gcash","bank_transfer"]}'::jsonb, false)
 on conflict (scope, key) do nothing;
 
@@ -405,8 +405,8 @@ create table if not exists public.orders (
   discount_amount numeric(12,2) not null default 0 check (discount_amount >= 0),
   vat_exempt_amount numeric(12,2) not null default 0 check (vat_exempt_amount >= 0),
   final_total numeric(12,2) not null default 0 check (final_total >= 0),
-  vat_rate numeric(6,5) not null default 0.12 check (vat_rate >= 0),
-  prices_include_vat boolean not null default true,
+  vat_rate numeric(6,5) not null default 0 check (vat_rate >= 0),
+  prices_include_vat boolean not null default false,
   payment_status text not null default 'paid' check (payment_status in ('paid', 'voided')),
   payment_confirmed boolean not null default true,
   is_voided boolean not null default false,
@@ -723,8 +723,8 @@ declare
   v_discount_amount numeric(12,2) := greatest(0, coalesce((v_order ->> 'discount_amount')::numeric, 0));
   v_discount_subtotal numeric(12,2) := greatest(0, coalesce((v_order ->> 'discount_subtotal')::numeric, 0));
   v_final_total numeric(12,2);
-  v_vat_rate numeric(6,5) := coalesce((v_order ->> 'vat_rate')::numeric, 0.12);
-  v_prices_include_vat boolean := coalesce((v_order ->> 'prices_include_vat')::boolean, true);
+  v_vat_rate numeric(6,5) := 0;
+  v_prices_include_vat boolean := false;
   v_method text := lower(coalesce(v_payment ->> 'method', 'cash'));
   v_received numeric(12,2);
   v_change numeric(12,2);

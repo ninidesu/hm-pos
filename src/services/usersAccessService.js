@@ -121,6 +121,41 @@ export async function fetchPortalAuditEvents(filters, { page = 1, pageSize = 25 
   return { events: data || [], count: count || 0 }
 }
 
+export async function fetchUserRecentActivity(userId, limit = 4) {
+  const activityLimit = Math.max(1, Math.min(Number(limit) || 4, 10))
+  const [auditResult, orderResult] = await Promise.allSettled([
+    fetchPortalAuditEvents({ actorId: userId }, { pageSize: Math.max(activityLimit * 2, 8) }),
+    supabase
+      .from('orders')
+      .select('id,order_number,receipt_number,final_total,is_voided,created_at')
+      .eq('cashier_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(Math.max(activityLimit * 2, 8)),
+  ])
+
+  const auditEvents = auditResult.status === 'fulfilled' ? auditResult.value.events : []
+  const orderRows = orderResult.status === 'fulfilled' && !orderResult.value.error ? orderResult.value.data || [] : []
+  const currency = new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' })
+  const transactionEvents = orderRows.map((order) => ({
+    id: `transaction-${order.id}`,
+    occurred_at: order.created_at,
+    severity: order.is_voided ? 'warning' : 'info',
+    activity_type: 'transaction',
+    summary: `${order.is_voided ? 'Voided' : 'Completed'} transaction ${order.receipt_number || order.order_number || ''} · ${currency.format(Number(order.final_total || 0))}`,
+  }))
+
+  const byNewest = [...auditEvents, ...transactionEvents]
+    .sort((a, b) => new Date(b.occurred_at || 0) - new Date(a.occurred_at || 0))
+  const recent = byNewest.slice(0, activityLimit)
+
+  if (transactionEvents.length && !recent.some((event) => event.activity_type === 'transaction')) {
+    recent[recent.length - 1] = transactionEvents[0]
+    recent.sort((a, b) => new Date(b.occurred_at || 0) - new Date(a.occurred_at || 0))
+  }
+
+  return recent
+}
+
 export async function fetchPortalAuditExport(filters) {
   let query = supabase.from('portal_audit_events').select(auditSelect)
   query = applyAuditFilters(query, filters)

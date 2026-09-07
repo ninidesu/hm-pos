@@ -470,7 +470,7 @@ function MenuItemCard({ item, view, busy, selected, onToggleSelect, menuOpen, on
         <p className="menu-card-desc">{item.description || 'No description yet.'}</p>
         <p className="menu-card-price">{money(item.price)}</p>
         <div className="menu-card-badges">
-          <span className={`inv-status tone-${item.available ? 'purple' : 'red'}`}>{item.available ? 'Available' : 'Unavailable'}</span>
+          <span className={`inv-status tone-${item.available ? 'green' : 'red'}`}>{item.available ? 'Available' : 'Unavailable'}</span>
           {customizable && <span className="inv-status tone-blue">{item.temperatureType === 'iced_only' ? 'Iced only' : item.temperatureType === 'hot_only' ? 'Hot only' : 'Flexible'}</span>}
           {!item.available && reason && <span className="menu-badge-warning"><AlertTriangle size={13} /> {reason.label}</span>}
         </div>
@@ -492,7 +492,7 @@ function ItemDrawer({ item, onClose, onEdit, onToggleAvailability }) {
         <header><div><span className="settings-kicker">{item.mainCategory}</span><h2 id="menu-drawer-title">{item.name}</h2></div><button type="button" onClick={onClose} aria-label="Close item details"><X size={20} /></button></header>
         <div className="ops-drawer-body">
           <section><h3>Overview</h3>
-            <p><b>{money(item.price)}</b> <span className={`inv-status tone-${item.available ? 'purple' : 'red'}`}>{item.available ? 'Available' : 'Unavailable'}</span></p>
+            <p><b>{money(item.price)}</b> <span className={`inv-status tone-${item.available ? 'green' : 'red'}`}>{item.available ? 'Available' : 'Unavailable'}</span></p>
             {!item.available && reason && <p className="menu-badge-warning"><AlertTriangle size={13} /> {reason.label}</p>}
             <p>{item.description || 'No description yet.'}</p>
           </section>
@@ -610,7 +610,7 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
                   </div>
                   <div className="form-grid menu-form-grid">
                     <label className="field"><span>Item name</span><input autoFocus value={values.name} maxLength={80} onChange={(e) => set('name', sanitizeCatalogText(e.target.value, 80))} placeholder="e.g. Spanish Latte" required /></label>
-                    <label className="field"><span>Menu price incl. VAT (PHP)</span><input type="number" min="0" step="0.01" value={values.price} onChange={(e) => set('price', e.target.value)} placeholder="0.00" required /></label>
+                    <label className="field"><span>Menu price (PHP)</span><input type="number" min="0" step="0.01" value={values.price} onChange={(e) => set('price', e.target.value)} placeholder="0.00" required /></label>
                     <label className="field"><span>Main category</span><select value={values.mainCategoryId} onChange={(e) => { set('mainCategoryId', e.target.value); set('subcategoryId', '') }}>{mainCategories.filter((c) => !c.is_archived).map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}</select></label>
                     <label className="field"><span>Subcategory</span><select value={values.subcategoryId} onChange={(e) => set('subcategoryId', e.target.value)}><option value="">No subcategory</option>{availableSubcategories.map((s) => <option key={s.id} value={s.id}>{s.display_name || s.name}</option>)}</select></label>
                     <label className="field"><span>Item type</span><select value={values.itemType} onChange={(e) => set('itemType', e.target.value)}><option value="drink">Drink</option><option value="food">Food</option></select></label>

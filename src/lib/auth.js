@@ -38,7 +38,13 @@ export async function signInPortal({ identifier, email, password, role }) {
   if (!isSupabaseConfigured) throw new Error('Supabase is not configured yet.')
   const requestedRole = normalizeRole(role)
   const loginIdentifier = String(identifier || email || '').trim()
-  const { data, error } = await supabase.auth.signInWithPassword({ email: loginIdentifier, password })
+  let loginEmail = loginIdentifier
+  if (!loginIdentifier.includes('@')) {
+    const { data: resolvedEmail, error: resolveError } = await supabase.rpc('resolve_portal_login_email', { p_username: loginIdentifier })
+    if (resolveError || !resolvedEmail) throw new Error('Invalid email, username, or password.')
+    loginEmail = resolvedEmail
+  }
+  const { data, error } = await supabase.auth.signInWithPassword({ email: loginEmail, password })
   if (error) throw error
 
   return verifyPortalRole(data, role)

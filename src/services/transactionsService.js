@@ -17,11 +17,17 @@ async function fetchCashierNames(ids) {
   if (!uniqueIds.length) return {}
   const { data, error } = await supabase.from('users').select('id,full_name,username').in('id', uniqueIds)
   if (error) throw error
-  return Object.fromEntries((data || []).map((user) => [user.id, user.full_name || user.username || 'Cashier']))
+  return Object.fromEntries((data || []).map((user) => [user.id, user.username || user.full_name || 'Cashier']))
+}
+
+function normalizePaymentMethod(value) {
+  const method = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_')
+  if (method === 'bank' || method === 'banktransfer') return 'bank_transfer'
+  return method
 }
 
 function normalize(row, cashierNames) {
-  const payment = row.payments?.[0] || null
+  const payment = Array.isArray(row.payments) ? row.payments[0] : row.payments || null
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -43,7 +49,7 @@ function normalize(row, cashierNames) {
     vatRate: Number(row.vat_rate || 0),
     pricesIncludeVat: Boolean(row.prices_include_vat),
     paymentStatus: row.payment_status,
-    paymentMethod: payment?.method || '',
+    paymentMethod: normalizePaymentMethod(payment?.method),
     paymentReference: payment?.reference_number || '',
     bankName: payment?.bank_name || '',
     amountReceived: Number(payment?.amount_received || 0),
