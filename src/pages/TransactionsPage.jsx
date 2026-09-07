@@ -25,23 +25,52 @@ function escapeHtml(value) {
   }[character]))
 }
 
+function receiptOptions(item) {
+  return [
+    item.customizations?.variantLabel,
+    item.customizations?.temperature,
+    item.customizations?.sugarLevel,
+    item.customizations?.iceLevel,
+    ...(item.addons || []).map((addon) => addon.name || addon),
+  ].filter(Boolean)
+}
+
+function receiptPaymentRows(transaction) {
+  if (transaction.paymentMethod === 'gcash') {
+    return [
+      ['Payment Reference Number', transaction.paymentReference],
+    ].filter((row) => row[1])
+  }
+  if (transaction.paymentMethod === 'bank_transfer') {
+    return [
+      ['Bank Name', transaction.bankName],
+      ['Payment Reference Number', transaction.paymentReference],
+    ].filter((row) => row[1])
+  }
+  return [
+    ['Cash Received', Number(transaction.amountReceived || transaction.finalTotal || 0).toFixed(2)],
+    ['Change', Number(transaction.changeAmount || 0).toFixed(2)],
+  ]
+}
+
 function printReceipt(transaction, receiptStore) {
   const printWindow = window.open('', '_blank', 'width=440,height=760')
   if (!printWindow) return
-  const itemRows = transaction.items.map((item) => `
-    <div class="item"><span>${escapeHtml(item.quantity)} × ${escapeHtml(item.name)}</span><b>${escapeHtml(money(item.lineTotal))}</b></div>
-    ${item.addons?.length ? `<small>${escapeHtml(item.addons.map((addon) => addon.name || addon).join(', '))}</small>` : ''}
-  `).join('')
+  const itemCount = (transaction.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0)
+  const itemRows = (transaction.items || []).map((item) => {
+    const options = receiptOptions(item)
+    return `<div class="receipt-item"><div>${escapeHtml(item.quantity)}</div><div class="receipt-item-name">${escapeHtml(item.name || 'Menu item')}${options.map((option) => `<div class="receipt-option">+ ${escapeHtml(option)}</div>`).join('')}${item.isDiscounted ? `<div class="receipt-option">+ ${escapeHtml(transaction.discountType || 'Discount')} discount applied</div>` : ''}</div><div class="receipt-item-price">${Number(item.lineTotal || 0).toFixed(2)}</div></div>`
+  }).join('')
+  const paymentRows = receiptPaymentRows(transaction).map(([label, value]) => `<div class="receipt-row"><span class="receipt-label">${escapeHtml(label)}:</span><span class="receipt-value">${escapeHtml(value)}</span></div>`).join('')
+  const storeName = receiptStore.name || 'HM POS'
+  const initials = storeName.split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
+  const logo = receiptStore.logoUrl ? `<img class="receipt-logo" src="${escapeHtml(receiptStore.logoUrl)}" alt="">` : `<span class="receipt-logo receipt-logo-text">${escapeHtml(initials)}</span>`
+  const discountRow = transaction.discountAmount > 0 ? `<div class="receipt-total-row"><span>Discount:</span><span>-${Number(transaction.discountAmount).toFixed(2)}</span></div>` : ''
   printWindow.document.write(`<!doctype html><html><head><title>${escapeHtml(transaction.receiptNumber)}</title><style>
-    *{box-sizing:border-box}body{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#111;margin:0;padding:22px;font-size:12px}
-    header{text-align:center;border-bottom:1px dashed #777;padding-bottom:12px;margin-bottom:12px}h1{font-size:20px;margin:0 0 4px}p{margin:3px 0}.meta,.totals{border-bottom:1px dashed #777;padding-bottom:10px;margin-bottom:10px}.row,.item{display:flex;justify-content:space-between;gap:16px;margin:6px 0}.item span{max-width:72%}.items small{display:block;margin:-3px 0 7px 16px;color:#555}.total{font-size:15px;font-weight:800;border-top:1px dashed #777;padding-top:8px}.void{border:1px solid #b91c1c;color:#b91c1c;padding:8px;text-align:center;font-weight:800;margin:12px 0}footer{text-align:center;margin-top:18px;color:#444}@media print{body{padding:0}}
+    *{box-sizing:border-box}body{margin:0;padding:22px;background:#fff;color:#000;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:1.45}.receipt-print-area{width:300px;max-width:100%;min-width:260px;margin:0 auto;padding:8px 10px;background:#fff;color:#000}.receipt-print-area *{box-sizing:border-box;font-family:inherit;white-space:normal;word-break:normal;overflow-wrap:break-word}.receipt-logo{width:42px;height:42px;max-width:42px;max-height:42px;object-fit:contain;display:block;margin:0 auto 4px}.receipt-logo-text{display:grid;place-items:center;font-size:24px;font-weight:800;color:#542475}.receipt-header,.receipt-footer{text-align:center}.receipt-store-name{font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase}.receipt-store-info{font-size:10px;line-height:1.25}.receipt-line{border-top:1px dashed #000;margin:6px 0;width:100%}.receipt-row,.receipt-total-row{display:flex;justify-content:space-between;gap:8px;width:100%;align-items:flex-start}.receipt-label{flex:0 0 112px;min-width:112px;text-align:left}.receipt-value{flex:1 1 auto;min-width:0;text-align:right}.receipt-table-header,.receipt-item{display:grid;grid-template-columns:24px minmax(0,1fr) 58px;gap:4px;width:100%;max-width:100%}.receipt-table-header{font-weight:800}.receipt-item-name{min-width:0}.receipt-item-price{text-align:right;white-space:nowrap}.receipt-option{grid-column:2 / 4;padding-left:0;font-size:10px}.receipt-grand-total{font-size:14px;font-weight:900}.receipt-footer{margin-top:8px;font-size:10px}@media print{body{padding:0}.receipt-print-area{position:absolute;left:0;top:0;width:80mm;max-width:80mm;min-width:80mm;margin:0}}
   </style></head><body>
-    <header>${receiptStore.logoUrl ? `<img src="${escapeHtml(receiptStore.logoUrl)}" alt="" style="width:54px;height:54px;object-fit:contain;margin-bottom:6px">` : ''}<h1>${escapeHtml(receiptStore.name)}</h1>${receiptStore.address ? `<p>${escapeHtml(receiptStore.address)}</p>` : ''}${receiptStore.email ? `<p>${escapeHtml(receiptStore.email)}</p>` : ''}${receiptStore.phone ? `<p>${escapeHtml(receiptStore.phone)}</p>` : ''}</header>
-    <section class="meta"><div class="row"><span>Receipt</span><b>${escapeHtml(transaction.receiptNumber)}</b></div><div class="row"><span>Order</span><b>${escapeHtml(transaction.orderNumber)}</b></div><div class="row"><span>Date</span><b>${escapeHtml(formatDateTime(transaction.createdAt))}</b></div><div class="row"><span>Cashier</span><b>${escapeHtml(transaction.cashierName)}</b></div><div class="row"><span>Order type</span><b>Walk-in</b></div></section>
-    <section class="items">${itemRows}</section>
-    <section class="totals"><div class="row"><span>Subtotal</span><b>${escapeHtml(money(transaction.subtotal))}</b></div>${transaction.discountAmount > 0 ? `<div class="row"><span>${escapeHtml(transaction.discountType || 'Discount')}</span><b>-${escapeHtml(money(transaction.discountAmount))}</b></div>` : ''}<div class="row total"><span>Total</span><b>${escapeHtml(money(transaction.finalTotal))}</b></div><div class="row"><span>Payment</span><b>${escapeHtml(PAYMENT_LABELS[transaction.paymentMethod] || transaction.paymentMethod)}</b></div>${transaction.paymentMethod === 'cash' ? `<div class="row"><span>Received</span><b>${escapeHtml(money(transaction.amountReceived))}</b></div><div class="row"><span>Change</span><b>${escapeHtml(money(transaction.changeAmount))}</b></div>` : ''}${transaction.paymentReference ? `<div class="row"><span>Reference</span><b>${escapeHtml(transaction.paymentReference)}</b></div>` : ''}</section>
-    ${transaction.isVoided ? `<div class="void">VOIDED<br><small>${escapeHtml(transaction.voidedReason)}</small></div>` : ''}
-    <footer><p>Thank you for choosing ${escapeHtml(receiptStore.name || 'HM POS')},<br>Have a great day!</p><p>Reprinted from HM POS</p></footer>
+    <div class="receipt-print-area"><div class="receipt-header">${logo}<div class="receipt-store-name">${escapeHtml(storeName)}</div>${receiptStore.address ? `<div class="receipt-store-info">${escapeHtml(receiptStore.address)}</div>` : ''}${receiptStore.email ? `<div class="receipt-store-info">${escapeHtml(receiptStore.email)}</div>` : ''}${receiptStore.phone ? `<div class="receipt-store-info">${escapeHtml(receiptStore.phone)}</div>` : ''}</div>
+    <div class="receipt-line"></div><div class="receipt-row"><span class="receipt-label">Order #:</span><span class="receipt-value">${escapeHtml(transaction.orderNumber)}</span></div><div class="receipt-row"><span class="receipt-label">Reference #:</span><span class="receipt-value">${escapeHtml(transaction.receiptNumber || 'N/A')}</span></div><div class="receipt-row"><span class="receipt-label">Date:</span><span class="receipt-value">${escapeHtml(formatDateTime(transaction.createdAt))}</span></div><div class="receipt-row"><span class="receipt-label">Type:</span><span class="receipt-value">Walk-in</span></div><div class="receipt-row"><span class="receipt-label">Cashier:</span><span class="receipt-value">${escapeHtml(transaction.cashierName || 'Cashier')}</span></div><div class="receipt-line"></div><div class="receipt-table-header"><div>QTY</div><div>ITEM</div><div>PRICE</div></div><div class="receipt-line"></div><div class="receipt-items">${itemRows}</div><div class="receipt-line"></div><div class="receipt-total-row"><span>Subtotal:</span><span>${Number(transaction.subtotal || 0).toFixed(2)}</span></div>${discountRow}<div class="receipt-total-row"><span>TOTAL:</span><span class="receipt-grand-total">${Number(transaction.finalTotal || 0).toFixed(2)}</span></div><div class="receipt-line"></div><div class="receipt-row"><span class="receipt-label">Payment Method:</span><span class="receipt-value">${escapeHtml(PAYMENT_LABELS[transaction.paymentMethod] || transaction.paymentMethod || 'Not recorded')}</span></div>${paymentRows}<div class="receipt-line"></div><div class="receipt-row"><span class="receipt-label">Items:</span><span class="receipt-value">${itemCount}</span></div><div class="receipt-line"></div><div class="receipt-footer">Thank you for choosing ${escapeHtml(storeName)},<br>Have a great day!</div><div class="receipt-line"></div></div>
   </body></html>`)
   printWindow.document.close()
   printWindow.focus()
