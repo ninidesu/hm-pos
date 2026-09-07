@@ -1025,7 +1025,7 @@ function ItemCustomizationModal({ product, onClose, onAdd }) {
         <div className="customize-product-info">
           <span>Customize</span>
           <h2 id="customize-modal-title">{product.name}</h2>
-          <p>{product.category}</p>
+          {product.description ? <p>{product.description}</p> : null}
         </div>
         <div className="customize-header-actions">
           <button type="button" className="customize-more-info" onClick={() => setShowMoreInfo(true)}>More info</button>

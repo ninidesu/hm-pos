@@ -2388,3 +2388,40 @@ html[data-theme] .cashier-v2 .customize-modal-header {
     gap: 4px;
   }
 }
+
+/* Customization header: show the real item description and give the product preview more presence. */
+html[data-theme] .cashier-v2 .customize-modal-header {
+  grid-template-columns: 128px minmax(0, 1fr) auto !important;
+  min-height: 148px !important;
+  gap: 18px !important;
+  padding: 16px 22px !important;
+}
+
+html[data-theme] .cashier-v2 .customize-modal-header > img {
+  width: 128px !important;
+  height: 128px !important;
+  border-radius: 16px !important;
+}
+
+html[data-theme] .cashier-v2 .customize-product-info p {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+@media (max-width: 640px) {
+  html[data-theme] .cashier-v2 .customize-modal-header {
+    grid-template-columns: 80px minmax(0, 1fr) auto !important;
+    min-height: 104px !important;
+    gap: 12px !important;
+    padding: 12px !important;
+  }
+
+  html[data-theme] .cashier-v2 .customize-modal-header > img {
+    width: 80px !important;
+    height: 80px !important;
+    border-radius: 13px !important;
+  }
+}
