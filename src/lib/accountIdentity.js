@@ -8,10 +8,10 @@ function emailName(value) {
 
 export function getAccountDisplayName(account, fallback = 'User') {
   const candidates = [
+    account?.username,
     account?.full_name,
     account?.fullName,
     account?.display_name,
-    account?.username,
     emailName(account?.email),
     fallback,
   ]

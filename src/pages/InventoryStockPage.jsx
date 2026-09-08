@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Check, Package, PackageMinus, Plus, RefreshCw, Search, X } from 'lucide-react'
+import { AlertTriangle, Check, Package, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { describeError } from '../utils/describeError'
 import { sanitizeDecimal } from '../utils/inputValidation'
-import { adjustStock, fetchMenuItemOptions, fetchStockItems, upsertStock } from '../services/opsInventoryService'
+import { deleteStock, fetchMenuItemOptions, fetchStockItems, upsertStock } from '../services/opsInventoryService'
 import TablePagination from '../components/TablePagination'
 
 const TABLE_PAGE_SIZE = 10
@@ -40,7 +40,7 @@ export default function InventoryStockPage({ role = 'admin' }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [form, setForm] = useState(null)
-  const [adjustment, setAdjustment] = useState(null)
+  const [removal, setRemoval] = useState(null)
   const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false)
   const [page, setPage] = useState(1)
 
@@ -111,12 +111,19 @@ export default function InventoryStockPage({ role = 'admin' }) {
     }
   }
 
+  const openRemoval = () => {
+    if (!form?.id || saving) return
+    const menuItem = menuItems.find((item) => item.id === form.menuItemId)
+    setError('')
+    setRemoval({ id: form.id, name: menuItem?.name || 'this item', reason: '' })
+  }
+
   const requestRemoval = (event) => {
     event.preventDefault()
-    if (!adjustment || saving) return
-    const amount = Number(adjustment.amount)
-    if (!Number.isFinite(amount) || amount <= 0 || amount > Number(adjustment.current)) {
-      setError(`Enter an amount from 0.01 to ${formatQuantity(adjustment.current)}.`)
+    if (!removal || saving) return
+    const reason = removal.reason.trim()
+    if (!reason) {
+      setError('Enter a reason before removing this item.')
       return
     }
     setError('')
@@ -124,18 +131,19 @@ export default function InventoryStockPage({ role = 'admin' }) {
   }
 
   const confirmRemoval = async () => {
-    if (!adjustment || saving) return
+    if (!removal || saving) return
+    const { id, name, reason } = removal
     setSaving(true)
     try {
-      await adjustStock(adjustment.id, -Number(adjustment.amount), adjustment.reason || 'Stock removed')
+      await deleteStock(id, reason.trim())
       setRemoveConfirmOpen(false)
-      setAdjustment(null)
+      setRemoval(null)
       setForm(null)
-      setNotice(`${formatQuantity(adjustment.amount)} ${adjustment.unit} removed from ${adjustment.name}.`)
+      setNotice(`${name} was permanently removed from stock management.`)
       await load()
     } catch (cause) {
       setRemoveConfirmOpen(false)
-      setError(describeError(cause, 'Could not remove stock.'))
+      setError(describeError(cause, 'Could not remove this item.'))
     } finally {
       setSaving(false)
     }
@@ -155,9 +163,9 @@ export default function InventoryStockPage({ role = 'admin' }) {
         {loading ? <div className="stock-empty">Loading stock…</div> : filtered.length === 0 ? <div className="stock-empty"><Package size={28} /><b>No stock records found</b><span>Add a stock record to connect a menu item to quantity tracking.</span></div> : <><div className="stock-table-wrap"><table className="stock-table"><thead><tr><th>Menu item</th><th>On hand</th><th>Low stock at</th><th>Status</th><th>Updated</th><th>Action</th></tr></thead><tbody>{pagedItems.map((item) => { const status = STATUS[stockState(item)]; return <tr key={item.id}><td><b>{item.name}</b><small>{item.unit}</small></td><td><strong>{formatQuantity(item.quantity)}</strong> {item.unit}</td><td>{formatQuantity(item.minStockLevel)} {item.unit}</td><td><span className={`stock-status ${status.className}`}>{status.label}</span></td><td>{item.updatedAt ? new Date(item.updatedAt).toLocaleDateString('en-PH') : '—'}</td><td><div className="stock-actions"><button type="button" className="stock-edit-button" onClick={() => openEdit(item)} aria-label={`Edit ${item.name}`}>Edit</button></div></td></tr> })}</tbody></table></div><TablePagination page={page} pageSize={TABLE_PAGE_SIZE} total={filtered.length} onPageChange={setPage} label="stock records"/></>}
       </section>
     </section>
-    {form && <Modal title={form.id ? 'Edit stock record' : 'Add stock record'} onClose={() => !saving && setForm(null)}><form onSubmit={save} className="stock-form"><label>Menu item<select required value={form.menuItemId} onChange={(event) => setForm((current) => ({ ...current, menuItemId: event.target.value }))} disabled={Boolean(form.id)}><option value="">Select a menu item</option>{menuItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="stock-form-grid"><label>Quantity<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: sanitizeDecimal(event.target.value) }))} /></label><label>Low stock indicator<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={form.minStockLevel} onChange={(event) => setForm((current) => ({ ...current, minStockLevel: sanitizeDecimal(event.target.value) }))} /></label><label>Healthy level<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={form.highStockLevel} onChange={(event) => setForm((current) => ({ ...current, highStockLevel: sanitizeDecimal(event.target.value) }))} /></label><label>Unit<input maxLength="20" value={form.unit} onChange={(event) => setForm((current) => ({ ...current, unit: event.target.value }))} /></label></div><label>Notes<textarea rows="3" maxLength="500" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label><ModalActions saving={saving} onClose={() => setForm(null)} onRemove={form.id ? () => setAdjustment({ id: form.id, name: menuItems.find((item) => item.id === form.menuItemId)?.name || 'this item', current: Number(form.quantity), unit: form.unit || 'piece', amount: '', reason: '' }) : null} /></form></Modal>}
-    {adjustment && !removeConfirmOpen && <Modal title={`Remove stock from ${adjustment.name}`} onClose={() => !saving && setAdjustment(null)}><form onSubmit={requestRemoval} className="stock-form"><p className="stock-adjustment-copy">Available stock: <b>{formatQuantity(adjustment.current)} {adjustment.unit}</b>. Enter how much should be deducted.</p><label>Amount to remove<input required type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0.01" max={adjustment.current} step="0.01" value={adjustment.amount} onChange={(event) => setAdjustment((current) => ({ ...current, amount: sanitizeDecimal(event.target.value) }))} autoFocus /></label><label>Reason<input required maxLength="160" value={adjustment.reason} onChange={(event) => setAdjustment((current) => ({ ...current, reason: event.target.value }))} placeholder="Waste, damage, count correction…" /></label><footer className="stock-modal-actions"><button type="button" className="secondary-button" onClick={() => setAdjustment(null)}>Cancel</button><button type="submit" className="danger-button"><PackageMinus size={16}/>Continue</button></footer></form></Modal>}
-    {adjustment && removeConfirmOpen && <ConfirmRemoval adjustment={adjustment} saving={saving} onCancel={() => setRemoveConfirmOpen(false)} onConfirm={confirmRemoval}/>}
+    {form && <Modal title={form.id ? 'Edit stock record' : 'Add stock record'} onClose={() => !saving && setForm(null)}><form onSubmit={save} className="stock-form"><label>Menu item<select required value={form.menuItemId} onChange={(event) => setForm((current) => ({ ...current, menuItemId: event.target.value }))} disabled={Boolean(form.id)}><option value="">Select a menu item</option>{menuItems.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="stock-form-grid"><label>Quantity<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={form.quantity} onChange={(event) => setForm((current) => ({ ...current, quantity: sanitizeDecimal(event.target.value) }))} /></label><label>Low stock indicator<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={form.minStockLevel} onChange={(event) => setForm((current) => ({ ...current, minStockLevel: sanitizeDecimal(event.target.value) }))} /></label><label>Healthy level<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={form.highStockLevel} onChange={(event) => setForm((current) => ({ ...current, highStockLevel: sanitizeDecimal(event.target.value) }))} /></label><label>Unit<input maxLength="20" value={form.unit} onChange={(event) => setForm((current) => ({ ...current, unit: event.target.value }))} /></label></div><label>Notes<textarea rows="3" maxLength="500" value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} /></label><ModalActions saving={saving} onClose={() => setForm(null)} onRemove={form.id ? openRemoval : null} /></form></Modal>}
+    {removal && !removeConfirmOpen && <Modal title={`Remove item: ${removal.name}`} onClose={() => !saving && setRemoval(null)}><form onSubmit={requestRemoval} className="stock-form"><p className="stock-adjustment-copy">This will permanently remove the stock record from the table. The menu item will remain in Manage Menu.</p><label>Reason for removal<textarea required rows="3" maxLength="160" value={removal.reason} onChange={(event) => setRemoval((current) => ({ ...current, reason: event.target.value }))} placeholder="Discontinued, duplicate record, incorrect item…" autoFocus /></label><footer className="stock-modal-actions"><button type="button" className="secondary-button" onClick={() => setRemoval(null)}>Cancel</button><button type="submit" className="danger-button"><Trash2 size={16}/>Continue</button></footer></form></Modal>}
+    {removal && removeConfirmOpen && <ConfirmRemoval removal={removal} saving={saving} onCancel={() => setRemoveConfirmOpen(false)} onConfirm={confirmRemoval}/>}
   </AppShell>
 }
 
@@ -166,9 +174,9 @@ function Modal({ title, onClose, children }) {
 }
 
 function ModalActions({ saving, onClose, onRemove }) {
-  return <footer className="stock-modal-actions">{onRemove && <button type="button" className="danger-button stock-remove-button" onClick={onRemove} disabled={saving}><PackageMinus size={16}/>Remove stock</button>}<span className="stock-modal-action-group"><button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></span></footer>
+  return <footer className="stock-modal-actions">{onRemove && <button type="button" className="danger-button stock-remove-button" onClick={onRemove} disabled={saving}><Trash2 size={16}/>Remove item</button>}<span className="stock-modal-action-group"><button type="button" className="secondary-button" onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className="primary-button" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button></span></footer>
 }
 
-function ConfirmRemoval({ adjustment, saving, onCancel, onConfirm }) {
-  return <div className="stock-modal-backdrop stock-confirm-backdrop" role="presentation"><section className="stock-confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="stock-remove-confirm-title" aria-describedby="stock-remove-confirm-copy"><span className="stock-confirm-icon"><AlertTriangle size={21}/></span><h2 id="stock-remove-confirm-title">Remove this stock?</h2><p id="stock-remove-confirm-copy">This will deduct <b>{formatQuantity(adjustment.amount)} {adjustment.unit}</b> from <b>{adjustment.name}</b>.</p><div><button type="button" className="secondary-button" onClick={onCancel} disabled={saving}>Go back</button><button type="button" className="danger-button" onClick={onConfirm} disabled={saving}>{saving ? 'Removing…' : 'Yes, remove stock'}</button></div></section></div>
+function ConfirmRemoval({ removal, saving, onCancel, onConfirm }) {
+  return <div className="stock-modal-backdrop stock-confirm-backdrop" role="presentation"><section className="stock-confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="stock-remove-confirm-title" aria-describedby="stock-remove-confirm-copy"><span className="stock-confirm-icon"><AlertTriangle size={21}/></span><h2 id="stock-remove-confirm-title">Remove item permanently?</h2><p id="stock-remove-confirm-copy"><b>{removal.name}</b> will be permanently deleted from the stock table. Reason: <b>{removal.reason}</b>. This cannot be undone.</p><div><button type="button" className="secondary-button" onClick={onCancel} disabled={saving}>Go back</button><button type="button" className="danger-button" onClick={onConfirm} disabled={saving}>{saving ? 'Removing…' : 'Yes, remove item'}</button></div></section></div>
 }

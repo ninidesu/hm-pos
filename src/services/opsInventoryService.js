@@ -62,12 +62,11 @@ export async function upsertStock(payload) {
   return data
 }
 
-export async function adjustStock(stockId, delta, reason) {
-  const { data, error } = await supabase.rpc('staff_adjust_stock', {
+
+export async function deleteStock(stockId, reason) {
+  const { error } = await supabase.rpc('staff_delete_stock', {
     p_stock_id: stockId,
-    p_delta: Number(delta),
     p_reason: reason || null,
   })
   if (error) throw error
-  return data
 }
