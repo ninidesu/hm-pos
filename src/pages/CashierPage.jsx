@@ -395,7 +395,7 @@ export default function CashierPage() {
         setCashierProfile(profile)
         const [productResult, orderResult] = await Promise.all([
           loadMenuItems(),
-          supabase.from('orders').select('id,order_number,receipt_number,cashier_id,subtotal,discount_subtotal,discount_amount,final_total,vat_rate,prices_include_vat,payment_status,payment_confirmed,discount_type,discount_customer_name,discount_id_number,created_at,order_items(*),payments:transactions(*)').order('created_at', { ascending: false }).limit(30),
+          supabase.from('orders').select('id,order_number,receipt_number,cashier_id,subtotal,discount_subtotal,discount_amount,final_total,vat_rate,prices_include_vat,payment_status,payment_confirmed,discount_type,discount_customer_name,discount_id_number,created_at,order_items(*),payments:transactions(*)').not('cashier_id', 'is', null).order('created_at', { ascending: false }).limit(30),
         ])
         if (ignore) return
         if (!productResult.error) {
@@ -618,7 +618,7 @@ export default function CashierPage() {
     addConfiguredItem(product)
   }
   function changeQty(lineKey, delta) {
-    setCart((current) => current.map((item) => item.lineKey === lineKey ? { ...item, qty: item.qty + delta } : item).filter((item) => item.qty > 0))
+    setCart((current) => current.map((item) => item.lineKey === lineKey ? { ...item, qty: Math.min(99, Math.max(0, item.qty + delta)) } : item).filter((item) => item.qty > 0))
   }
 
   function editCartItem(item) {
@@ -630,7 +630,7 @@ export default function CashierPage() {
       const withoutOriginal = current.filter((line) => line.lineKey !== item.lineKey)
       const lineKey = makeLineKey(item, customizations, addons)
       const existing = withoutOriginal.find((line) => line.lineKey === lineKey)
-      if (existing) return withoutOriginal.map((line) => line.lineKey === lineKey ? { ...line, qty: line.qty + quantity } : line)
+      if (existing) return withoutOriginal.map((line) => line.lineKey === lineKey ? { ...line, qty: Math.min(99, line.qty + quantity) } : line)
       return [...withoutOriginal, { ...item, lineKey, qty: quantity, customizations, addons }]
     })
   }

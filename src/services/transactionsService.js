@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 import { getAccountDisplayName } from '../lib/accountIdentity'
 
-const ORDER_SELECT = `id,order_number,receipt_number,status,order_source,cashier_id,subtotal,
+const ORDER_SELECT = `id,order_number,receipt_number,status,cashier_id,subtotal,
   discount_type,discount_customer_name,discount_id_number,discount_subtotal,
   discount_amount,vat_exempt_amount,final_total,vat_rate,prices_include_vat,
   payment_status,payment_confirmed,is_voided,voided_reason,voided_by,voided_at,
@@ -33,7 +33,7 @@ function normalize(row, cashierNames) {
     id: row.id,
     orderNumber: row.order_number,
     receiptNumber: row.receipt_number,
-    status: row.is_voided ? 'Voided' : row.order_source === 'cashier_pos' && row.payment_status === 'paid' ? 'Completed' : row.status,
+    status: row.is_voided ? 'Voided' : row.cashier_id && row.payment_status === 'paid' ? 'Completed' : row.status,
     isVoided: Boolean(row.is_voided),
     voidedReason: row.voided_reason || '',
     voidedAt: row.voided_at,
@@ -77,7 +77,7 @@ function normalize(row, cashierNames) {
 
 export async function fetchTransactions({ search = '', paymentMethod = 'all', status = 'all', dateFrom = '', dateTo = '', limit = 250 } = {}) {
   let query = supabase.from('orders').select(ORDER_SELECT).order('created_at', { ascending: false }).limit(limit)
-  query = query.eq('order_source', 'cashier_pos')
+  query = query.not('cashier_id', 'is', null)
   if (paymentMethod !== 'all') query = query.eq('transactions.method', paymentMethod)
   if (status === 'completed') query = query.eq('is_voided', false)
   if (status === 'voided') query = query.eq('is_voided', true)

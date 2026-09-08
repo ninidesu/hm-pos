@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 
-const ORDER_SELECT = `id,order_number,receipt_number,status,order_source,final_total,discount_amount,
+const ORDER_SELECT = `id,order_number,receipt_number,status,cashier_id,final_total,discount_amount,
   payment_status,is_voided,created_at,updated_at,
   order_items(item_name,display_name,quantity,line_total),
   payments:transactions(method,status)`
@@ -17,7 +17,7 @@ function isoDay(date) {
 }
 
 function isRevenueOrder(order) {
-  const isPaidCashierSale = order.order_source === 'cashier_pos' && ['Preparing', 'Ready for Pickup', 'Completed'].includes(order.status)
+  const isPaidCashierSale = Boolean(order.cashier_id) && ['Preparing', 'Ready for Pickup', 'Completed'].includes(order.status)
   return !order.is_voided && order.payment_status === 'paid' && (order.status === 'Completed' || isPaidCashierSale)
 }
 
