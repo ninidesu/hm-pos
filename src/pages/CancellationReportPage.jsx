@@ -8,6 +8,7 @@ import {
 import AppShell from '../components/AppShell'
 import { describeError } from '../utils/describeError'
 import { money } from '../utils/money'
+import { sanitizeDecimal } from '../utils/inputValidation'
 import { buildVatExemptOrderBreakdown } from '../utils/pricing'
 import {
   buildCancellationTrend, computeCancellationSummary, exportCancellationReportToPdf,
@@ -445,8 +446,8 @@ export default function CancellationReportPage() {
         <label>Payment method<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)}><option value="all">All methods</option>{Object.entries(PAYMENT_LABEL).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         {activeTab === 'refunds' && <label>Refund status<select value={refundStatus} onChange={(event) => setRefundStatus(event.target.value)}><option value="all">All refund states</option>{Object.entries(REFUND_STATUS_LABEL).filter(([value]) => value !== 'not_applicable').map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>}
         {activeTab === 'cancellations' && <label>Cancelled by<select value={cancelledBy} onChange={(event) => setCancelledBy(event.target.value)}><option value="all">All roles</option>{cancelledByOptions.map((value) => <option value={value} key={value}>{startCase(value)}</option>)}</select></label>}
-        <label>Minimum {activeTab === 'refunds' ? 'refund' : 'order'} amount<input type="number" inputMode="decimal" min="0" value={minAmount} onChange={(event) => setMinAmount(event.target.value)} placeholder="PHP 0" /></label>
-        <label>Maximum amount<input type="number" min="0" value={maxAmount} onChange={(event) => setMaxAmount(event.target.value)} placeholder="No maximum" /></label>
+        <label>Minimum {activeTab === 'refunds' ? 'refund' : 'order'} amount<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" value={minAmount} onChange={(event) => setMinAmount(sanitizeDecimal(event.target.value))} placeholder="PHP 0" /></label>
+        <label>Maximum amount<input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" value={maxAmount} onChange={(event) => setMaxAmount(sanitizeDecimal(event.target.value))} placeholder="No maximum" /></label>
       </div>
       <div className="cancel-filter-actions"><button type="button" className="button button-outline" onClick={resetFilters}><RotateCcw size={15} /> Reset All</button><button type="button" className="button button-dark" onClick={() => setFiltersOpen(false)}>Show {searchedRecords.length} records</button></div>
     </div>}

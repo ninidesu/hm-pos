@@ -148,7 +148,7 @@ export default function PortalLoginPage() {
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   minLength="8"
-                  maxLength="32"
+                  maxLength="12"
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"

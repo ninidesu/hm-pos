@@ -939,8 +939,8 @@ begin
   if v_username !~ '^[A-Za-z0-9._-]{3,24}$' then
     raise exception 'Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens';
   end if;
-  if char_length(v_password) not between 8 and 32 then
-    raise exception 'Password must be 8 to 32 characters';
+  if char_length(v_password) not between 8 and 12 then
+    raise exception 'Password must be 8 to 12 characters';
   end if;
   if exists (select 1 from public.users where lower(username) = lower(v_username)) then
     raise exception 'That username is already in use';
@@ -1020,8 +1020,8 @@ begin
   if v_username !~ '^[A-Za-z0-9._-]{3,24}$' then
     raise exception 'Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens';
   end if;
-  if v_password <> '' and char_length(v_password) not between 8 and 32 then
-    raise exception 'Password must be 8 to 32 characters';
+  if v_password <> '' and char_length(v_password) not between 8 and 12 then
+    raise exception 'Password must be 8 to 12 characters';
   end if;
   if exists (select 1 from public.users where id <> p_user_id and lower(username) = lower(v_username)) then
     raise exception 'That username is already in use';

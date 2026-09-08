@@ -194,7 +194,7 @@ function AddPortalUserModal({ open, defaultRole, availableRoles, onClose, onSucc
     const username = values.username.trim()
     if (!fullName) { setError('Enter the user’s full name.'); return }
     if (!/^[A-Za-z0-9._-]{3,24}$/.test(username)) { setError('Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens.'); return }
-    if (!isValidInternalPassword(values.password)) { setError('Password must be 8 to 32 characters.'); return }
+    if (!isValidInternalPassword(values.password)) { setError('Password must be 8 to 12 characters.'); return }
     if (!PORTAL_ROLES.some((item) => item.value === values.role)) { setError('Choose a valid portal role.'); return }
     setBusy(true)
     try {
@@ -210,7 +210,7 @@ function AddPortalUserModal({ open, defaultRole, availableRoles, onClose, onSucc
     <div className="ua-form-grid">
       <label className="ua-field ua-field--wide"><span>Full name</span><input autoFocus required maxLength={60} value={values.fullName} onChange={(event) => setValues({ ...values, fullName: sanitizePersonName(event.target.value, 60) })} autoComplete="name"/></label>
       <label className="ua-field"><span>Username</span><input required value={values.username} onChange={(event) => setValues({ ...values, username: sanitizeUsername(event.target.value, 24) })} autoComplete="username" autoCapitalize="none" spellCheck="false" minLength={3} maxLength={24} pattern="[A-Za-z0-9._-]+"/><small>Used to sign in to the portal.</small></label>
-      <label className="ua-field"><span>Password</span><span className="ua-password-control"><input required type={showPassword ? 'text' : 'password'} value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 32) })} autoComplete="new-password" minLength={8} maxLength={32} pattern=".{8,32}"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={17} aria-hidden="true"/> : <Eye size={17} aria-hidden="true"/>}</button></span><small>Use 8–32 characters. Share it securely with the cashier.</small></label>
+      <label className="ua-field"><span>Password</span><span className="ua-password-control"><input required type={showPassword ? 'text' : 'password'} value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 12) })} autoComplete="new-password" minLength={8} maxLength={12} pattern=".{8,12}"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={17} aria-hidden="true"/> : <Eye size={17} aria-hidden="true"/>}</button></span><small>Use 8–12 characters. Share it securely with the cashier.</small></label>
       <label className="ua-field ua-field--wide"><span>Portal role</span><select value={values.role} onChange={(event) => setValues({ ...values, role: event.target.value })}>{roleOptions.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select><small>Admin / Manager accounts manage the system; cashiers receive POS checkout access.</small></label>
     </div>
     {error && <p className="ua-form-error" role="alert">{error}</p>}
@@ -278,7 +278,7 @@ function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onC
     const username = values.username.trim()
     if (!/^[A-Za-z0-9._-]{3,24}$/.test(username)) return setError('Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens.')
     const password = isCurrentAdmin ? undefined : values.password
-    if (password && !isValidInternalPassword(password)) return setError('Password must be 8 to 32 characters.')
+    if (password && !isValidInternalPassword(password)) return setError('Password must be 8 to 12 characters.')
     setBusy(true)
     try {
       if (isCurrentAdmin) {
@@ -299,7 +299,7 @@ function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onC
       <header><div><span className="ua-modal-icon"><Pencil size={20}/></span><div><h2 id="edit-user-title">Edit {user.role === 'cashier' ? 'cashier' : 'admin'} account</h2><p>{isCurrentAdmin ? 'Update your administration username.' : 'Update this user’s username or password. No email is sent.'}</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close edit user dialog"><X/></button></header>
       <div className="ua-form-grid">
         <label className="ua-field ua-field--wide"><span>Username</span><input required value={values.username} onChange={(event) => setValues({ ...values, username: sanitizeUsername(event.target.value, 24) })} autoComplete="username" minLength={3} maxLength={24} pattern="[A-Za-z0-9._-]+"/></label>
-        {!isCurrentAdmin && <label className="ua-field ua-field--wide"><span>Password</span><input type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 32) })} autoComplete="new-password" minLength={values.password ? 8 : undefined} maxLength={32} placeholder="Enter a new password"/><small>Existing passwords cannot be displayed. Leave blank to keep the current password.</small></label>}
+        {!isCurrentAdmin && <label className="ua-field ua-field--wide"><span>Password</span><input type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 12) })} autoComplete="new-password" minLength={values.password ? 8 : undefined} maxLength={12} pattern={values.password ? '.{8,12}' : undefined} placeholder="Enter a new password"/><small>Existing passwords cannot be displayed. Leave blank to keep the current password.</small></label>}
       </div>
       {error && <p className="ua-form-error" role="alert">{error}</p>}
       <footer><button type="button" className="ua-secondary-action" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="ua-primary-action" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button></footer>

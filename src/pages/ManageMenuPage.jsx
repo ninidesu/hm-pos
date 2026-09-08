@@ -6,7 +6,7 @@ import {
 import AppShell from '../components/AppShell'
 import { money } from '../utils/money'
 import { describeError } from '../utils/describeError'
-import { sanitizeCatalogText } from '../utils/inputValidation'
+import { sanitizeCatalogText, sanitizeDecimal, sanitizeDigits } from '../utils/inputValidation'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import {
   fetchMainCategories, fetchSubcategories, fetchManageMenuItems,
@@ -318,8 +318,8 @@ export default function ManageMenuPage({ role = 'staff' }) {
               <option value="highest-price">Sort by: Highest Price</option>
             </select>
           </label>
-          <label className="menu-inline-filter menu-price-filter"><span className="sr-only">Minimum price</span><input type="number" min="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="Min. price" /></label>
-          <label className="menu-inline-filter menu-price-filter"><span className="sr-only">Maximum price</span><input type="number" min="0" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Max price" /></label>
+          <label className="menu-inline-filter menu-price-filter"><span className="sr-only">Minimum price</span><input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" value={minPrice} onChange={(e) => setMinPrice(sanitizeDecimal(e.target.value))} placeholder="Min. price" /></label>
+          <label className="menu-inline-filter menu-price-filter"><span className="sr-only">Maximum price</span><input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" value={maxPrice} onChange={(e) => setMaxPrice(sanitizeDecimal(e.target.value))} placeholder="Max price" /></label>
           <button type="button" className="menu-clear-filters" onClick={() => { setSortBy('name'); setMinPrice(''); setMaxPrice('') }}>Clear</button>
         </div>
         <div className="menu-toolbar-group menu-toolbar-view-actions">
@@ -678,7 +678,7 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
                   </div>
                   <div className="form-grid menu-form-grid">
                     <label className="field"><span>Item name</span><input autoFocus value={values.name} maxLength={80} onChange={(e) => set('name', sanitizeCatalogText(e.target.value, 80))} placeholder="e.g. Spanish Latte" required /></label>
-                    <label className="field"><span>Menu price (PHP)</span><input type="number" min="0" step="0.01" value={values.price} onChange={(e) => set('price', e.target.value)} placeholder="0.00" required /></label>
+                    <label className="field"><span>Menu price (PHP)</span><input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={values.price} onChange={(e) => set('price', sanitizeDecimal(e.target.value))} placeholder="0.00" required /></label>
                     <label className="field"><span>Main category</span><select value={values.mainCategoryId} onChange={(e) => { set('mainCategoryId', e.target.value); set('subcategoryId', '') }}>{mainCategories.filter((c) => !c.is_archived).map((c) => <option key={c.id} value={c.id}>{c.display_name || c.name}</option>)}</select></label>
                     <label className="field"><span>Subcategory</span><select value={values.subcategoryId} onChange={(e) => set('subcategoryId', e.target.value)}><option value="">No subcategory</option>{availableSubcategories.map((s) => <option key={s.id} value={s.id}>{s.display_name || s.name}</option>)}</select></label>
                     <label className="field"><span>Item type</span><select value={values.itemType} onChange={(e) => set('itemType', e.target.value)}><option value="drink">Drink</option><option value="food">Food</option></select></label>
@@ -706,8 +706,8 @@ function ItemFormModal({ item, mainCategories, subcategories, isAdmin = false, o
                         {choices.map((choice, index) => <div className="menu-choice-row" key={choice.key || index}>
                           <span className="menu-choice-number">{index + 1}</span>
                           <label className="field"><span>Choice name</span><input value={choice.label} maxLength={60} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, label: e.target.value } : current))} placeholder="Per Box (6 pcs)" /></label>
-                          <label className="field"><span>Stock quantity</span><input type="number" min="1" step="1" value={choice.quantity} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, quantity: e.target.value } : current))} placeholder="6" /></label>
-                          <label className="field"><span>Price (PHP)</span><input type="number" min="0" step="0.01" value={choice.price} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, price: e.target.value } : current))} placeholder="165.00" /></label>
+                          <label className="field"><span>Stock quantity</span><input type="text" inputMode="numeric" pattern="[0-9]*" min="1" step="1" value={choice.quantity} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, quantity: sanitizeDigits(e.target.value, 3) } : current))} placeholder="6" /></label>
+                          <label className="field"><span>Price (PHP)</span><input type="text" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" min="0" step="0.01" value={choice.price} onChange={(e) => set('choices', choices.map((current, choiceIndex) => choiceIndex === index ? { ...current, price: sanitizeDecimal(e.target.value) } : current))} placeholder="165.00" /></label>
                           <button type="button" className="menu-choice-remove" onClick={() => set('choices', choices.filter((_, choiceIndex) => choiceIndex !== index))}>Remove</button>
                         </div>)}
                       </div>

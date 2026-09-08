@@ -189,7 +189,7 @@ export async function saveStaffUsername(userId, username) {
 
 export async function changeStaffPassword(password) {
   if (!isSupabaseConfigured) throw new Error('Supabase is not configured.')
-  if (!isValidInternalPassword(password)) throw new Error('Use 8–32 characters.')
+  if (!isValidInternalPassword(password)) throw new Error('Use 8–12 characters.')
   const { error } = await supabase.auth.updateUser({ password })
   if (error) throw error
 }

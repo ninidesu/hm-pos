@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase'
 
-const ORDER_SELECT = `id,order_number,receipt_number,status,final_total,discount_amount,
+const ORDER_SELECT = `id,order_number,receipt_number,status,order_source,final_total,discount_amount,
   payment_status,is_voided,created_at,updated_at,
   order_items(item_name,display_name,quantity,line_total),
   payments:transactions(method,status)`
@@ -17,7 +17,8 @@ function isoDay(date) {
 }
 
 function isRevenueOrder(order) {
-  return !order.is_voided && order.status === 'Completed' && order.payment_status === 'paid'
+  const isPaidCashierSale = order.order_source === 'cashier_pos' && ['Preparing', 'Ready for Pickup', 'Completed'].includes(order.status)
+  return !order.is_voided && order.payment_status === 'paid' && (order.status === 'Completed' || isPaidCashierSale)
 }
 
 export async function fetchDashboardData() {
@@ -31,6 +32,7 @@ export async function fetchDashboardData() {
   if (ordersResult.error) throw ordersResult.error
   if (stockResult.error) throw stockResult.error
   if (menuResult.error) throw menuResult.error
+  if (auditResult.error) throw auditResult.error
   return {
     orders: ordersResult.data || [],
     stockRows: stockResult.data || [],
@@ -123,7 +125,7 @@ export function computeDashboardMetrics({ orders, stockRows = [], menuItems = []
     bestSellers: rankedItems.slice(0, 5),
     lowSellers: [...rankedItems].sort((left, right) => left.qty - right.qty || left.revenue - right.revenue).slice(0, 5),
     peakHours,
-    recentOrders: [...orders].sort((left, right) => new Date(right.created_at) - new Date(left.created_at)).slice(0, 7),
+    recentOrders: orders.filter(isRevenueOrder).sort((left, right) => new Date(right.created_at) - new Date(left.created_at)).slice(0, 7),
     lowStockItems,
     outOfStockItems,
     unavailableMenuItems: menuItems.filter((item) => !item.is_available).length,

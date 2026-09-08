@@ -3,8 +3,8 @@ export const USERNAME_PATTERN = '[A-Za-z0-9._-]{3,24}'
 export const EMAIL_MAX_LENGTH = 160
 export const EMAIL_PATTERN = '[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}'
 export const PHONE_PATTERN = '09[0-9]{9}'
-export const PASSWORD_PATTERN = '(?=.*[0-9]).{8,32}'
-export const INTERNAL_PASSWORD_PATTERN = '.{8,32}'
+export const PASSWORD_PATTERN = '.{8,12}'
+export const INTERNAL_PASSWORD_PATTERN = '.{8,12}'
 
 export function sanitizePersonName(value, maxLength = 60) {
   return value.replace(/[^\p{L}\p{M} .'-]/gu, '').replace(/\s{2,}/g, ' ').slice(0, maxLength)
@@ -20,6 +20,13 @@ export function sanitizeUsername(value, maxLength = 24) {
 
 export function sanitizeDigits(value, maxLength = 32) {
   return value.replace(/\D/g, '').slice(0, maxLength)
+}
+
+export function sanitizeDecimal(value, maxLength = 12) {
+  const normalized = String(value || '').replace(/[^\d.]/g, '')
+  const [whole, ...fractionParts] = normalized.split('.')
+  if (!fractionParts.length) return whole.slice(0, maxLength)
+  return `${whole}.${fractionParts.join('')}`.slice(0, maxLength)
 }
 
 export function sanitizePhone(value) {
@@ -41,9 +48,9 @@ export function isValidPhone(value) {
 }
 
 export function isValidPassword(value) {
-  return /^(?=.*\d).{8,32}$/.test(value)
+  return /^.{8,12}$/.test(value)
 }
 
 export function isValidInternalPassword(value) {
-  return /^.{8,32}$/.test(value)
+  return /^.{8,12}$/.test(value)
 }
