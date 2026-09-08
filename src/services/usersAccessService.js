@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { getAccountDisplayName } from '../lib/accountIdentity'
 
 export const PORTAL_ROLES = [
   { value: 'admin', label: 'Admin / Manager' },
@@ -102,13 +103,30 @@ function applyAuditFilters(query, filters) {
 
 const auditSelect = 'id,occurred_at,actor_id,actor_name_snapshot,actor_role_snapshot,surface,module,action,entity_type,entity_id,entity_label,summary,result,severity,before_data,after_data,metadata,correlation_id'
 
+async function withUsernameActors(events) {
+  const actorIds = [...new Set((events || []).map((event) => event.actor_id).filter(Boolean))]
+  if (!actorIds.length) return events || []
+  const { data, error } = await supabase.from('users').select('id,username,full_name,email').in('id', actorIds)
+  if (error) return events || []
+  const labels = new Map((data || []).map((user) => [user.id, getAccountDisplayName(user, '')]))
+  return (events || []).map((event) => {
+    const label = labels.get(event.actor_id)
+    if (!label) return event
+    const previousLabel = String(event.actor_name_snapshot || '')
+    const summary = previousLabel && String(event.summary || '').startsWith(previousLabel)
+      ? label + String(event.summary).slice(previousLabel.length)
+      : event.summary
+    return { ...event, actor_name_snapshot: label, summary }
+  })
+}
+
 export async function fetchPortalAuditEvents(filters, { page = 1, pageSize = 25 } = {}) {
   let query = supabase.from('portal_audit_events').select(auditSelect, { count: 'exact' })
   query = applyAuditFilters(query, filters)
   const start = (page - 1) * pageSize
   const { data, error, count } = await query.order('occurred_at', { ascending: false }).range(start, start + pageSize - 1)
   if (error) throw setupAwareError(error)
-  return { events: data || [], count: count || 0 }
+  return { events: await withUsernameActors(data || []), count: count || 0 }
 }
 
 export async function fetchUserRecentActivity(userId, limit = 4) {
@@ -151,7 +169,7 @@ export async function fetchPortalAuditExport(filters) {
   query = applyAuditFilters(query, filters)
   const { data, error } = await query.order('occurred_at', { ascending: false }).limit(5000)
   if (error) throw setupAwareError(error)
-  return data || []
+  return withUsernameActors(data || [])
 }
 
 export function downloadAuditCsv(events) {

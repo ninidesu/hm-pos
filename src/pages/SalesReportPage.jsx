@@ -9,6 +9,7 @@ import AppShell from '../components/AppShell'
 import { money } from '../utils/money'
 import { describeError } from '../utils/describeError'
 import { getCurrentPortalSession } from '../lib/auth'
+import { getAccountDisplayName } from '../lib/accountIdentity'
 import { supabase } from '../lib/supabase'
 import {
   applyLocalFilters, buildChannelTrend, buildTrend, buildTrendMetrics, computeProductMomentum, computeSalesReport, exportSalesReportCsv,
@@ -320,7 +321,7 @@ export default function SalesReportPage() {
 
   const runExportCsv = () => {
     const exportSummary = computeSalesReport(filteredOrders, []).summary
-    const csv = exportSalesReportCsv({ orders: filteredOrders, summary: exportSummary, filterLabel, generatedBy: profile?.full_name || profile?.email })
+    const csv = exportSalesReportCsv({ orders: filteredOrders, summary: exportSummary, filterLabel, generatedBy: getAccountDisplayName(profile, 'HM POS Admin') })
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
@@ -334,7 +335,7 @@ export default function SalesReportPage() {
   }
 
   const runExportPdf = () => {
-    const ok = printSalesReportPdf({ report, trend, filterLabel, generatedBy: profile?.full_name || profile?.email })
+    const ok = printSalesReportPdf({ report, trend, filterLabel, generatedBy: getAccountDisplayName(profile, 'HM POS Admin') })
     if (ok) pushToast('success', 'Sales report PDF is ready to print or save.')
     else pushToast('error', 'The report window was blocked by the browser.')
     setExportMenuOpen(false)

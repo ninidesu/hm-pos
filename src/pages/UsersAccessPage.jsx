@@ -200,7 +200,7 @@ function AddPortalUserModal({ open, defaultRole, availableRoles, onClose, onSucc
     try {
       await createPortalUser({ ...values, fullName, username })
       onClose()
-      onSuccess(`${fullName} was added. They can sign in with their username and password.`)
+      onSuccess(`${username} was added. They can sign in with their username and password.`)
     } catch (cause) { setError(describeError(cause, 'Could not add this user.')) }
     finally { setBusy(false) }
   }
@@ -256,7 +256,7 @@ function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
       {error && <p className="ua-form-error" role="alert">{error}</p>}
     </div>
     <footer><button type="button" className="ua-danger-action" onClick={() => setRemoveOpen(true)} disabled={busy || isSelf} title={isSelf ? 'You cannot remove your own account' : undefined}><Trash2 size={16}/>Remove User</button><button type="button" className="ua-secondary-action" onClick={onEdit} disabled={busy}><Pencil size={16}/>Edit account</button><button type="button" className="ua-primary-action" onClick={saveRole} disabled={busy || role === (user.role === 'manager' ? 'admin' : user.role)}>{busy ? 'Saving…' : 'Save role'}</button></footer>
-  </aside><RemoveUserConfirm open={removeOpen} user={user} onClose={() => setRemoveOpen(false)} onRemoved={() => onChanged(`${user.full_name || user.email} was removed from portal access.`)} /></>
+  </aside><RemoveUserConfirm open={removeOpen} user={user} onClose={() => setRemoveOpen(false)} onRemoved={() => onChanged(`${getAccountDisplayName(user, 'This user')} was removed from portal access.`)} /></>
 }
 
 function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onChanged }) {
