@@ -19,9 +19,9 @@ export function resolveAuthWelcomeName(...sources) {
       continue
     }
     const candidate = [
-      source.username,
-      source.display_name,
       source.full_name,
+      source.display_name,
+      source.username,
       source.first_name,
       source.name,
     ].map(normalizeWelcomeName).find(Boolean)

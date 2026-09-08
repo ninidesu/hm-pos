@@ -1,5 +1,9 @@
--- Resolve active internal portal usernames for Supabase password authentication.
--- Password verification and role enforcement remain in Supabase Auth/application code.
+-- HM POS · restore username-to-email resolution for portal login
+--
+-- The portal stores internal Auth emails behind usernames. This RPC is the
+-- read-only bridge used before Supabase password authentication. It does not
+-- send email, OTPs, invitations, or invoke an Edge Function.
+
 create or replace function public.resolve_portal_login_email(p_username text)
 returns text
 language sql
@@ -18,3 +22,5 @@ $$;
 
 revoke all on function public.resolve_portal_login_email(text) from public;
 grant execute on function public.resolve_portal_login_email(text) to anon, authenticated;
+
+notify pgrst, 'reload schema';

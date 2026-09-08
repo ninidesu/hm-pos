@@ -169,6 +169,27 @@ create trigger hm_pos_on_auth_user_created
   after insert on auth.users
   for each row execute function public.hm_pos_handle_new_auth_user();
 
+-- Resolve active internal portal usernames for Supabase password authentication.
+-- Password verification and role enforcement remain in Supabase Auth/application code.
+create or replace function public.resolve_portal_login_email(p_username text)
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select u.email
+  from public.users u
+  where lower(btrim(u.username)) = lower(btrim(p_username))
+    and u.is_active = true
+    and u.removed_at is null
+    and public.normalize_role(u.role) in ('admin', 'manager', 'cashier')
+  limit 1;
+$$;
+
+revoke all on function public.resolve_portal_login_email(text) from public;
+grant execute on function public.resolve_portal_login_email(text) to anon, authenticated;
+
 -- If the first one or two Auth users were created before this schema was run,
 -- make the oldest account admin and the next account cashier.
 with ranked_auth_users as (
@@ -933,14 +954,23 @@ begin
   end if;
 
   insert into auth.users (
-    id, aud, role, email, encrypted_password, email_confirmed_at,
-    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new, recovery_token
   ) values (
-    v_user_id, 'authenticated', 'authenticated', v_email,
+    v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', v_email,
     crypt(v_password, gen_salt('bf')), now(),
     jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'hm_pos_internal_account', true),
     jsonb_build_object('full_name', v_full_name, 'username', v_username, 'hm_pos_role', v_role),
-    now(), now()
+    now(), now(), '', '', '', ''
+  );
+
+  insert into auth.identities (
+    id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+  ) values (
+    gen_random_uuid(), v_user_id, v_user_id::text,
+    jsonb_build_object('sub', v_user_id::text, 'email', v_email, 'email_verified', true),
+    'email', null, now(), now()
   );
 
   select * into v_row from public.users where id = v_user_id;

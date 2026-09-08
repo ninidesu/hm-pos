@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
 import TablePagination from '../components/TablePagination'
 import { useAuth } from '../context/AuthContext'
+import { getAccountDisplayName, getAccountInitials } from '../lib/accountIdentity'
 import { saveStaffUsername } from '../services/staffSettingsService'
 import { addCurrentUserNotification } from '../services/notificationCenterService'
 import { describeError } from '../utils/describeError'
@@ -34,7 +35,7 @@ function formatDateTime(value) {
 }
 
 function initials(value) {
-  return String(value || 'User').replace(/@.*$/, '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'US'
+  return getAccountInitials({ full_name: value }, 'US')
 }
 
 function accountLoginLabel(email) {
@@ -169,7 +170,7 @@ function UserManagementModule({ refreshSignal, addOpen, setAddOpen }) {
 }
 
 function UserIdentity({ user }) {
-  const name = user.username || user.full_name || user.email || 'Unnamed user'
+  const name = getAccountDisplayName(user, 'Unnamed user')
   return <div className="ua-user-identity"><span aria-hidden="true">{initials(name)}</span><div><b>{name}</b><small>{accountLoginLabel(user.email)}</small></div></div>
 }
 
@@ -235,12 +236,12 @@ function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
   const isSelf = user.id === currentUserId
   const saveRole = async () => {
     setBusy(true); setError('')
-    try { await updatePortalUserRole(user.id, role); onChanged(`${user.full_name || user.email} was updated.`) }
+    try { await updatePortalUserRole(user.id, role); onChanged(getAccountDisplayName(user, 'This user') + ' was updated.') }
     catch (cause) { setError(describeError(cause, 'Could not update this user.')) }
     finally { setBusy(false) }
   }
   return <><button className="ua-drawer-scrim" onClick={onClose} aria-label="Close user details"/><aside className="ua-drawer" role="dialog" aria-modal="true" aria-labelledby="user-drawer-title">
-    <header><div><span className="ua-drawer-avatar">{initials(user.username || user.full_name || user.email)}</span><div><h2 id="user-drawer-title">{user.username || user.full_name || user.email}</h2><p>{accountLoginLabel(user.email)}</p></div></div><button autoFocus type="button" onClick={onClose} aria-label="Close user details"><X/></button></header>
+    <header><div><span className="ua-drawer-avatar">{initials(getAccountDisplayName(user, 'Unnamed user'))}</span><div><h2 id="user-drawer-title">{getAccountDisplayName(user, 'Unnamed user')}</h2><p>{accountLoginLabel(user.email)}</p></div></div><button autoFocus type="button" onClick={onClose} aria-label="Close user details"><X/></button></header>
     <div className="ua-drawer-body">
       <section><div className="ua-section-heading"><ShieldCheck size={18}/><div><h3>Access controls</h3><p>Changes take effect the next time access is checked.</p></div></div>
         <label className="ua-field"><span>Portal role</span><select value={role} onChange={(event) => setRole(event.target.value)} disabled={isSelf}>{PORTAL_ROLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
@@ -318,7 +319,7 @@ function RemoveUserConfirm({ open, user, onClose, onRemoved }) {
     catch (cause) { setError(describeError(cause, 'Could not remove this user. Please try again.')) }
     finally { setBusy(false) }
   }
-  const name = user.username || user.full_name || user.email
+  const name = getAccountDisplayName(user, 'this user')
   return <div className="ua-overlay ua-confirm-overlay" onMouseDown={busy ? undefined : onClose}>
     <section className="ua-modal ua-confirm-modal" onMouseDown={(event) => event.stopPropagation()} role="alertdialog" aria-modal="true" aria-labelledby="remove-user-title" aria-describedby="remove-user-description">
       <header><div><span className="ua-modal-icon ua-modal-icon--danger"><Trash2 size={20}/></span><div><h2 id="remove-user-title">Remove {name}?</h2><p>Confirm permanent portal removal.</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close remove user confirmation"><X/></button></header>

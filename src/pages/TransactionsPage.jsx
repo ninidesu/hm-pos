@@ -1,6 +1,8 @@
 import { AlertTriangle, Ban, FileSpreadsheet, FileText, Printer, ReceiptText, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '../components/AppShell'
+import { useAuth } from '../context/AuthContext'
+import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { exportTransactionsToCsv, exportTransactionsToXlsx, fetchTransactions, voidOrder } from '../services/transactionsService'
 import { addCurrentUserNotification } from '../services/notificationCenterService'
@@ -78,6 +80,7 @@ function printReceipt(transaction, receiptStore) {
 }
 
 export default function TransactionsPage() {
+  const { profile, user } = useAuth()
   const receiptStore = useStoreInfo()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
@@ -151,7 +154,7 @@ export default function TransactionsPage() {
     setExporting(format)
     setError('')
     try {
-      const input = { records: transactions, summary, filterLabel }
+      const input = { records: transactions, summary, filterLabel, generatedBy: getAccountDisplayName(profile || user?.user_metadata || user, 'HM POS Admin') }
       if (format === 'xlsx') await exportTransactionsToXlsx(input)
       else exportTransactionsToCsv(input)
       await addCurrentUserNotification({ category: 'exports', title: `${format.toUpperCase()} downloaded`, message: `Transaction history was exported with ${transactions.length} record${transactions.length === 1 ? '' : 's'}.` })

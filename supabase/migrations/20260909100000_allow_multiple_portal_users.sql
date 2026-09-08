@@ -91,14 +91,23 @@ begin
   end if;
 
   insert into auth.users (
-    id, aud, role, email, encrypted_password, email_confirmed_at,
-    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+    id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, email_change, email_change_token_new, recovery_token
   ) values (
-    v_user_id, 'authenticated', 'authenticated', v_email,
+    v_user_id, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', v_email,
     crypt(v_password, gen_salt('bf')), now(),
     jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'hm_pos_internal_account', true),
     jsonb_build_object('full_name', v_full_name, 'username', v_username, 'hm_pos_role', v_role),
-    now(), now()
+    now(), now(), '', '', '', ''
+  );
+
+  insert into auth.identities (
+    id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+  ) values (
+    gen_random_uuid(), v_user_id, v_user_id::text,
+    jsonb_build_object('sub', v_user_id::text, 'email', v_email, 'email_verified', true),
+    'email', null, now(), now()
   );
 
   select * into v_row from public.users where id = v_user_id;

@@ -4,6 +4,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { signOutPortal } from '../lib/auth'
 import LogoutConfirmModal from './auth/LogoutConfirmModal'
 import { useAuth } from '../context/AuthContext'
+import { getAccountDisplayName, getAccountInitials } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { DEFAULT_STAFF_PREFERENCES, fetchStaffPreferences, getCachedStaffPreferences, subscribeToStaffPreferences } from '../services/staffSettingsService'
 import {
@@ -43,14 +44,9 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
   const notificationAnchorRef = useRef(null)
   const { profile, user } = useAuth()
   const accountRoleLabel = role === 'admin' ? 'Admin / Manager' : 'Cashier'
-  const accountDisplayName = profile?.username || profile?.full_name || profile?.email || user?.email || accountRoleLabel
-  const accountInitials = accountDisplayName
-    .replace(/@.*$/, '')
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('') || 'ST'
+  const account = profile || user?.user_metadata || user
+  const accountDisplayName = getAccountDisplayName(account, accountRoleLabel)
+  const accountInitials = getAccountInitials(account, 'ST')
   const brandInitials = String(storeInfo.name || 'HM POS').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   const unreadNotificationCount = notifications.filter((item) => !item.read).length
   const visibleNotificationCount = role === 'admin' ? unreadNotificationCount : Math.max(notificationCount, unreadNotificationCount)
@@ -144,10 +140,11 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
         const { data: order } = await supabase.from('orders').select('cashier_id').eq('id', transaction.order_id).maybeSingle()
         if (order?.cashier_id) {
           const { data: cashier } = await supabase.from('users').select('username,full_name').eq('id', order.cashier_id).maybeSingle()
-          cashierName = cashier?.username || cashier?.full_name || cashierName
+          cashierName = getAccountDisplayName(cashier, cashierName)
         }
       }
-      add({ category: 'transactions', title: 'New transaction', message: `${cashierName} recorded ${transaction?.reference_number ? `payment ${transaction.reference_number}` : 'a new payment transaction'}.` })
+      const paymentDescription = transaction?.reference_number ? 'payment ' + transaction.reference_number : 'a new payment transaction'
+      add({ category: 'transactions', title: 'New transaction', message: cashierName + ' recorded ' + paymentDescription + '.' })
     })
     if (role === 'admin' || staffPreferences.notify_low_stock) channel.on('postgres_changes', { event: '*', schema: 'public', table: 'stock' }, ({ eventType, new: stock }) => {
       const quantity = Number(stock?.quantity)
@@ -165,7 +162,7 @@ export default function AppShell({ role, title, eyebrow, children, actions, titl
     })
     if (role === 'admin') channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'users' }, ({ new: account }) => {
       if (account?.role !== 'cashier' && account?.role !== 'staff') return
-      add({ category: 'accounts', title: 'New cashier account', message: `${account?.username || account?.full_name || account?.email || 'A cashier'} can now access the cashier workspace.` })
+      add({ category: 'accounts', title: 'New cashier account', message: getAccountDisplayName(account, 'A cashier') + ' can now access the cashier workspace.' })
     })
 
     channel.subscribe()

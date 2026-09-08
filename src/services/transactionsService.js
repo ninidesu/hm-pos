@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { getAccountDisplayName } from '../lib/accountIdentity'
 
 const ORDER_SELECT = `id,order_number,receipt_number,status,cashier_id,subtotal,
   discount_type,discount_customer_name,discount_id_number,discount_subtotal,
@@ -17,7 +18,7 @@ async function fetchCashierNames(ids) {
   if (!uniqueIds.length) return {}
   const { data, error } = await supabase.from('users').select('id,full_name,username').in('id', uniqueIds)
   if (error) throw error
-  return Object.fromEntries((data || []).map((user) => [user.id, user.username || user.full_name || 'Cashier']))
+  return Object.fromEntries((data || []).map((user) => [user.id, getAccountDisplayName(user, 'Cashier')]))
 }
 
 function normalizePaymentMethod(value) {
@@ -100,11 +101,11 @@ export async function fetchTransactionById(orderId) {
 export async function fetchTransactionAudit(orderId) {
   const { data, error } = await supabase
     .from('transaction_audit_log')
-    .select('id,action,reason,previous_value,new_value,performed_by,created_at,users(full_name)')
+    .select('id,action,reason,previous_value,new_value,performed_by,created_at,users(full_name,username)')
     .eq('order_id', orderId)
     .order('created_at', { ascending: false })
   if (error) throw error
-  return (data || []).map((entry) => ({ ...entry, staffName: entry.users?.full_name || 'HM POS' }))
+  return (data || []).map((entry) => ({ ...entry, staffName: getAccountDisplayName(entry.users, 'HM POS') }))
 }
 
 export async function voidOrder(orderId, reason) {

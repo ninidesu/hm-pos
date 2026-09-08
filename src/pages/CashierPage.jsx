@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import LogoutConfirmModal from '../components/auth/LogoutConfirmModal'
 import { usePricing } from '../context/usePricing'
 import { getCurrentPortalSession, signOutPortal } from '../lib/auth'
+import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
 import { buildVatExemptOrderBreakdown } from '../utils/pricing'
@@ -407,11 +408,15 @@ export default function CashierPage() {
         }
         if (!orderResult.error && orderResult.data) {
           const cashierIds = [...new Set(orderResult.data.map((order) => order.cashier_id).filter(Boolean))]
-          let cashierNames = {}
+          let cashierNames = profile?.id ? { [profile.id]: getAccountDisplayName(profile, 'Cashier') } : {}
           if (cashierIds.length) {
             const { data: cashiers } = await supabase.from('users').select('id,username,full_name').in('id', cashierIds)
-            cashierNames = Object.fromEntries((cashiers || []).map((cashier) => [cashier.id, cashier.username || cashier.full_name || 'Cashier']))
+            cashierNames = {
+              ...cashierNames,
+              ...Object.fromEntries((cashiers || []).map((cashier) => [cashier.id, getAccountDisplayName(cashier, 'Cashier')])),
+            }
           }
+          if (profile?.id) cashierNames[profile.id] = getAccountDisplayName(profile, 'Cashier')
           if (!ignore) setTransactions(orderResult.data.map((order) => normalizeOrder({ ...order, cashier_name: cashierNames[order.cashier_id] || 'Cashier' })))
         }
         const syncError = productResult.error || orderResult.error
@@ -537,8 +542,7 @@ export default function CashierPage() {
   })
   const total = Math.max(0, priceBreakdown.totalAmount)
   const change = payment.method === 'Cash' ? Math.max(0, Number(payment.cashReceived || 0) - total) : 0
-  const cashierName = cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier'
-  const cashierUsername = cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier'
+  const cashierName = getAccountDisplayName(cashierProfile, 'Cashier')
   const storeInitials = String(storeInfo.name || 'HM POS').split(/\s+/).filter(Boolean).map((part) => part[0]).join('').slice(0, 2).toUpperCase()
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0)
   const cashierStatus = !isSupabaseConfigured
@@ -663,7 +667,7 @@ export default function CashierPage() {
         vatRate: pricing.vatRate,
         pricesIncludeVat: pricing.pricesIncludeVat,
         discountSubtotal,
-        cashierName: cashierProfile?.username || cashierProfile?.full_name || cashierProfile?.email || 'Cashier',
+        cashierName,
         total,
         createdAt: new Date().toISOString(),
         items: cart.map((item) => {
@@ -790,7 +794,7 @@ export default function CashierPage() {
       <header className="legacy-cashier-top">
         <div className="cashier-top-left">
           {storeInfo.logoUrl ? <img className="cashier-brand-mark cashier-brand-logo" src={storeInfo.logoUrl} alt=""/> : <span className="cashier-brand-mark" aria-hidden="true">{storeInitials}</span>}
-          <div><span className="cashier-kicker">{storeInfo.name || 'HM POS'}</span><strong className="cashier-welcome-name">Welcome Cashier, {cashierUsername}!</strong></div>
+          <div><span className="cashier-kicker">{storeInfo.name || 'HM POS'}</span><strong className="cashier-welcome-name">Welcome, {cashierName}!</strong></div>
           <span
             className={`cashier-connection-status is-${cashierStatus.tone}`}
             role="status"
@@ -813,11 +817,11 @@ export default function CashierPage() {
           </div>
         </div>
         <nav>
-          <button type="button" className={`cashier-workspace-nav-button ${showTransactions ? 'is-active' : ''}`} onClick={showTransactions ? returnToPos : openTransactions} aria-pressed={showTransactions}>
+          <button type="button" className={`cashier-workspace-nav-button ${showTransactions ? 'is-active' : ''}`} onClick={showTransactions ? returnToPos : openTransactions} aria-pressed={showTransactions} aria-label={showTransactions ? 'Back to POS' : 'Transactions'}>
             {showTransactions ? <ShoppingBag size={21} /> : <ReceiptText size={21} />}
             <span>{showTransactions ? 'Back to POS' : 'Transactions'}</span>
           </button>
-          <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)}><LogOut size={21} aria-hidden="true" /><span>Sign out</span></button>
+          <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)} aria-label="Sign out"><LogOut size={21} aria-hidden="true" /><span>Sign out</span></button>
         </nav>
       </header>
 

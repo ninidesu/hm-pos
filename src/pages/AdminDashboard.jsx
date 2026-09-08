@@ -15,6 +15,7 @@ import StaffSettingsPage from './StaffSettingsPage'
 import { computeDashboardMetrics, fetchDashboardData } from '../services/adminDashboardService'
 import { describeError } from '../utils/describeError'
 import { money } from '../utils/money'
+import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 
 const adminPageTitles = {
@@ -177,7 +178,7 @@ function AdminDashboardHome() {
     titleActions={<div className="ad-live-state"><i />Live monitoring{lastUpdated && <span>Updated {timeAgo(lastUpdated)}</span>}</div>}
   >
     {error && <div className="ad-error" role="alert"><AlertTriangle size={19} /><div><b>Dashboard unavailable</b><span>{error}</span></div><button type="button" onClick={() => load()}><RefreshCw size={15} />Try again</button></div>}
-    {loading ? <DashboardSkeleton /> : metrics && <DashboardContent metrics={metrics} username={profile?.username || user?.email?.split('@')[0] || 'Admin'} />}
+    {loading ? <DashboardSkeleton /> : metrics && <DashboardContent metrics={metrics} username={getAccountDisplayName(profile || user?.user_metadata || user, 'Admin')} />}
   </AppShell>
 }
 

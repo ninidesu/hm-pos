@@ -42,6 +42,10 @@ export async function signInPortal({ identifier, email, password, role }) {
   let loginEmail = loginIdentifier
   if (!loginIdentifier.includes('@')) {
     const { data: resolvedEmail, error: resolveError } = await supabase.rpc('resolve_portal_login_email', { p_username: loginIdentifier })
+    const resolveErrorMessage = `${resolveError?.message || ''} ${resolveError?.details || ''}`.toLowerCase()
+    if (resolveError && (resolveError.code === 'PGRST202' || resolveErrorMessage.includes('resolve_portal_login_email'))) {
+      throw new Error('Username login setup is incomplete. Apply the latest HM POS Supabase migration.')
+    }
     if (resolveError || !resolvedEmail) throw new Error('Invalid email, username, or password.')
     loginEmail = resolvedEmail
   }

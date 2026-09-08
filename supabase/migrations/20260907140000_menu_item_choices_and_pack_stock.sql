@@ -26,7 +26,7 @@ declare
  requested_addons integer; valid_addons integer; temperature text; variant text; is_discounted boolean;
 begin
  if auth.uid() is null then raise exception 'Authentication required'; end if;
- if not exists(select 1 from public.profiles where id=auth.uid() and role in ('admin','cashier')) then raise exception 'Cashier access required'; end if;
+ if not public.hm_pos_is_staff() then raise exception 'Cashier access required'; end if;
  if jsonb_array_length(coalesce(request_payload->'items','[]'))=0 then raise exception 'The cashier order has no items'; end if;
  for i in select * from jsonb_array_elements(request_payload->'items') loop
   begin q:=(i->>'quantity')::integer; exception when others then raise exception 'Every item must have a valid quantity'; end;
