@@ -4216,7 +4216,7 @@ html[data-theme='dark'] .cashier-v2 .modern-quantity-stepper strong {
 /* Browser-style order tabs: the strip stays on the canvas and the active tab
    visually connects to the menu surface. */
 html[data-theme] .cashier-v2 .cashier-workspace-tabs {
-  background: transparent;
+  background: var(--brand-soft);
   box-shadow: none;
 }
 
@@ -5938,9 +5938,11 @@ html[data-theme] .cashier-v2 .legacy-cashier-top nav {
     position: static;
     display: block;
     width: auto;
-    min-height: 24px;
-    margin: 0 0 8px;
-    padding: 0;
+    min-height: 41px;
+    margin: -16px -22px 16px;
+    padding: 0 22px;
+    border-radius: 15px 15px 0 0;
+    background: var(--brand-soft);
   }
 
   html[data-theme] .cashier-v2 .cashier-order-tabs-list {
@@ -5950,7 +5952,7 @@ html[data-theme] .cashier-v2 .legacy-cashier-top nav {
 
   html[data-theme] .cashier-v2 .cashier-order-tab {
     flex: 0 0 auto;
-    height: 22px;
+    height: 41px;
     margin: 0;
   }
 
@@ -7628,13 +7630,15 @@ html[data-theme] .cashier-v2 .cashier-connection-status i {
 
 html[data-theme] .cashier-v2 .cashier-status-copy {
   min-width: 0;
-  display: grid;
-  gap: 2px;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 html[data-theme] .cashier-v2 .cashier-status-label {
-  display: block !important;
+  display: inline !important;
   overflow: hidden;
   color: inherit !important;
   font-size: 0.7rem !important;
@@ -7645,7 +7649,7 @@ html[data-theme] .cashier-v2 .cashier-status-label {
 }
 
 html[data-theme] .cashier-v2 .cashier-status-detail {
-  display: block;
+  display: inline;
   overflow: hidden;
   color: currentColor;
   font-size: 0.56rem;
@@ -7917,4 +7921,520 @@ html[data-theme] .cashier-v2 .cashier-product-body footer {
 html[data-theme] .cashier-v2 .cashier-product-body footer strong {
   min-width: 0;
   white-space: nowrap;
+}
+/* ===================================================================
+   MOBILE CART DRAWER — slides in from the LEFT
+   Only affects screens ≤ 899px. Desktop is completely untouched.
+   =================================================================== */
+
+/* Close-drawer button hidden on desktop */
+.cashier-v2 .cashier-close-drawer {
+  display: none;
+}
+
+/* Cart header actions wrapper */
+.cashier-v2 .cashier-cart-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 899px) {
+  /* --- Cart as a fixed left-side drawer --- */
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    position: fixed;
+    z-index: 50;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(88vw, 420px);
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0 20px 20px 0;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.25);
+    transform: translateX(-105%);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket.mobile-cart-open {
+    transform: translateX(0);
+  }
+
+  /* Backdrop overlay */
+  .cashier-v2 .cashier-cart-backdrop {
+    position: fixed;
+    z-index: 49;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(3px);
+    animation: cashier-backdrop-in 0.25s ease-out;
+  }
+
+  @keyframes cashier-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* Show close button on mobile */
+  .cashier-v2 .cashier-close-drawer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    border: 1px solid var(--cashier-line, #dce8df);
+    border-radius: 10px;
+    background: #fff;
+    color: #4e5a50;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+
+  /* Cart drawer internal layout */
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket > header {
+    flex: 0 0 auto;
+    min-height: 64px;
+  }
+
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket .legacy-ticket-items {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: none;
+  }
+
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket .cashier-checkout-block {
+    flex: 0 0 auto;
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  /* Menu fills the full width when cart is a drawer */
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) {
+    grid-template-columns: 1fr;
+    padding-bottom: 92px;
+  }
+
+  /* Mobile summary bar */
+  .cashier-v2 .cashier-mobile-summary {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-height: 70px;
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(32, 63, 48, 0.14);
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 -12px 28px rgba(20, 45, 31, 0.16);
+    backdrop-filter: blur(12px);
+  }
+
+  .cashier-v2 .cashier-mobile-summary > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .cashier-v2 .cashier-mobile-summary span {
+    color: var(--cashier-muted);
+    font-size: 0.72rem;
+    font-weight: 750;
+  }
+
+  .cashier-v2 .cashier-mobile-summary strong {
+    color: var(--cashier-forest);
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cashier-v2 .cashier-mobile-summary button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-width: 132px;
+    min-height: 48px;
+    border: 0;
+    border-radius: 12px;
+    background: var(--cashier-forest);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 850;
+  }
+
+  .cashier-v2 .cashier-mobile-summary button:disabled {
+    opacity: 0.48;
+  }
+
+  /* --- Additional mobile POS refinements --- */
+
+  /* Header: compact for mobile */
+  .cashier-v2 .legacy-cashier-top {
+    min-height: auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 10px 12px;
+  }
+
+  .cashier-v2 .cashier-top-meta {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    order: 3;
+  }
+
+  .cashier-v2 .cashier-time span {
+    display: none;
+  }
+
+  .cashier-v2 .cashier-time {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .cashier-v2 .cashier-time b {
+    font-size: 1rem;
+  }
+
+  /* Nav buttons compact */
+  .cashier-v2 .legacy-cashier-top nav {
+    gap: 4px;
+  }
+
+  .cashier-v2 .legacy-cashier-top nav button {
+    min-width: 48px;
+    padding: 4px 6px;
+  }
+
+  .cashier-v2 .legacy-cashier-top nav button span {
+    overflow: hidden;
+    max-width: 56px;
+    font-size: 0.58rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Products: 2-column grid on mobile */
+  .cashier-v2 .legacy-pos-products {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+
+  .cashier-v2 .legacy-pos-products article {
+    min-height: 200px;
+  }
+
+  .cashier-v2 .legacy-pos-products img {
+    height: 100px;
+  }
+
+  /* Menu controls: stack vertically */
+  .cashier-v2 .cashier-menu-controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .cashier-v2 .cashier-menu-controls > label {
+    flex-basis: auto;
+    width: 100%;
+    max-width: none;
+  }
+
+  .cashier-v2 .cashier-menu-controls .legacy-pos-tabs {
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+
+  /* Menu heading: stack */
+  .cashier-v2 .cashier-menu-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .cashier-v2 .cashier-menu-actions {
+    width: 100%;
+  }
+
+  .cashier-v2 .cashier-menu-actions .cashier-new-order {
+    flex: 1;
+  }
+
+  .cashier-v2 .cashier-fullscreen span {
+    display: none !important;
+  }
+
+  .cashier-v2 .cashier-fullscreen {
+    min-width: auto;
+  }
+
+  /* Menu card padding */
+  .cashier-v2 .legacy-pos-menu {
+    padding: 16px;
+    min-height: auto;
+    margin-top: 30px;
+  }
+
+  /* Workspace tabs: compact */
+  .cashier-v2 .cashier-workspace-tabs {
+    left: 12px;
+    right: 12px;
+    top: -31px;
+    overflow-x: auto;
+    max-width: calc(100% - 24px);
+  }
+
+  /* Transaction layout on mobile: stack panels */
+  .cashier-v2 .cashier-transactions-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .cashier-v2 .cashier-transactions-panel,
+  .cashier-v2 .cashier-transaction-detail-panel {
+    min-height: auto;
+    height: auto;
+  }
+
+  /* Checkout and customize modals: full-width on mobile */
+  .cashier-v2 .checkout-backdrop,
+  .cashier-v2 .cashier-custom-backdrop {
+    padding: 8px;
+  }
+
+  .cashier-v2 .checkout-modal,
+  .cashier-v2 .cashier-custom-modal {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .cashier-v2 .checkout-modal-head,
+  .cashier-v2 .checkout-modal-body,
+  .cashier-v2 .checkout-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .cashier-v2 .checkout-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Cart line items: more compact */
+  .cashier-v2 .legacy-ticket-items article {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .cashier-v2 .legacy-ticket-items img {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+/* Extra small screens (≤ 480px) */
+@media (max-width: 480px) {
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    width: 100vw;
+    border-radius: 0;
+  }
+
+  .cashier-v2 .legacy-pos-products {
+    gap: 8px !important;
+  }
+
+  .cashier-v2 .legacy-pos-products article {
+    min-height: 180px;
+  }
+
+  .cashier-v2 .legacy-pos-products img {
+    height: 85px;
+  }
+
+  .cashier-v2 .cashier-mobile-summary button {
+    min-width: 110px;
+  }
+
+  .cashier-v2 .cashier-top-left .cashier-connection-status {
+    display: none;
+  }
+
+  .cashier-v2 .cashier-welcome-name {
+    max-width: 40vw;
+    font-size: 0.82rem;
+  }
+}
+
+/* Dark theme mobile drawer overrides */
+@media (max-width: 899px) {
+  html[data-theme='dark'] .cashier-v2 .cashier-cart-backdrop {
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  html[data-theme='dark'] .cashier-v2 .cashier-mobile-summary {
+    border-top-color: rgba(255, 255, 255, 0.08);
+    background: rgba(18, 34, 25, 0.97);
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.3);
+  }
+
+  html[data-theme='dark'] .cashier-v2 .cashier-close-drawer {
+    border-color: var(--cashier-line);
+    background: var(--cashier-surface);
+    color: var(--cashier-muted);
+  }
+
+  html[data-theme='dark'] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    background: var(--cashier-surface, #122219);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Wide desktop cashier balance: 10% wider cart. */
+@media (min-width: 1261px) {
+  html[data-theme] .cashier-v2 .legacy-pos-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(528px, 594px);
+  }
+}
+
+/* Desktop menu cards: wider three-up cards with a larger image area. */
+@media (min-width: 900px) {
+  html[data-theme] .cashier-v2 .legacy-pos-products {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-products article {
+    height: auto !important;
+    min-height: 276px !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-products img {
+    height: clamp(138px, 12vw, 176px) !important;
+  }
+}
+
+/* Final cashier POS layout: menu gets more room and the cart stays on the right. */
+@media (min-width: 900px) and (max-width: 1260px) {
+  html[data-theme] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 32vw);
+    grid-template-areas: "menu cart";
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-pos-menu {
+    grid-area: menu;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    grid-area: cart;
+  }
+}
+
+@media (min-width: 1261px) {
+  html[data-theme] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) {
+    grid-template-columns: minmax(0, 1fr) minmax(480px, 528px);
+    grid-template-areas: "menu cart";
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-pos-menu {
+    grid-area: menu;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    grid-area: cart;
+  }
+}
+
+/* Larger desktop product cards: more height and more room for item images. */
+@media (min-width: 900px) {
+  html[data-theme] .cashier-v2 .legacy-pos-products {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-products article {
+    height: auto !important;
+    min-height: 330px !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-products img {
+    height: clamp(160px, 14vw, 210px) !important;
+    flex-basis: auto !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-pos-products article > .cashier-product-body {
+    height: auto !important;
+    min-height: 128px !important;
+    padding: 14px 16px 14px;
+  }
+}
+
+/* Mobile cart drawer opens from the right side. */
+@media (max-width: 899px) {
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    right: 0 !important;
+    left: auto !important;
+    border-radius: 20px 0 0 20px !important;
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.25) !important;
+    transform: translateX(105%) !important;
+  }
+
+  .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket.mobile-cart-open {
+    transform: translateX(0) !important;
+  }
+
+html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions-layout) > .legacy-ticket {
+    box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5) !important;
+  }
+}
+
+/* Transactions use the same two-panel shell as the POS workspace. */
+@media (min-width: 900px) and (max-width: 1260px) {
+  html[data-theme] .cashier-v2 .cashier-transactions-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 32vw) !important;
+    grid-template-areas: "menu cart";
+  }
+
+  html[data-theme] .cashier-v2 .cashier-transactions-layout > .cashier-transactions-panel {
+    grid-area: menu;
+  }
+
+  html[data-theme] .cashier-v2 .cashier-transactions-layout > .cashier-transaction-detail-panel {
+    grid-area: cart;
+  }
+}
+
+@media (min-width: 1261px) {
+  html[data-theme] .cashier-v2 .cashier-transactions-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(480px, 528px) !important;
+    grid-template-areas: "menu cart";
+  }
+
+  html[data-theme] .cashier-v2 .cashier-transactions-layout > .cashier-transactions-panel {
+    grid-area: menu;
+  }
+
+  html[data-theme] .cashier-v2 .cashier-transactions-layout > .cashier-transaction-detail-panel {
+    grid-area: cart;
+  }
+}
+
+@media (max-width: 899px) {
+  html[data-theme] .cashier-v2 .cashier-transactions-layout {
+    grid-template-columns: 1fr !important;
+    grid-template-areas: "menu" "cart";
+  }
+
+  html[data-theme] .cashier-v2 .cashier-transactions-layout > .cashier-transactions-panel {
+    grid-area: menu;
+  }
+
+  html[data-theme] .cashier-v2 .cashier-transactions-layout > .cashier-transaction-detail-panel {
+    grid-area: cart;
+  }
 }

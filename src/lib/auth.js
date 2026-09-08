@@ -17,7 +17,7 @@ export function isCustomerRole(role) {
   return normalizeRole(role) === 'customer'
 }
 
-const portalProfileSelect = 'id, role, full_name, username, email'
+const portalProfileSelect = 'id, role, full_name, username, email, is_active, removed_at'
 
 export async function getCurrentPortalSession() {
   if (!isSupabaseConfigured) return { session: null, profile: null, error: new Error('Supabase is not configured.') }
@@ -31,7 +31,8 @@ export async function getCurrentPortalSession() {
     .select(portalProfileSelect)
     .eq('id', userId)
     .maybeSingle()
-  return { session: sessionData.session, profile, error: profileError || null }
+  const activeProfile = profile && profile.is_active !== false && !profile.removed_at ? profile : null
+  return { session: sessionData.session, profile: activeProfile, error: profileError || null }
 }
 
 export async function signInPortal({ identifier, email, password, role }) {
@@ -60,7 +61,10 @@ async function verifyPortalRole(data, role) {
     .maybeSingle()
 
   if (profileError) throw profileError
-  if (!profile) throw new Error('Login succeeded, but no portal profile was found for this account.')
+  if (!profile || profile.is_active === false || profile.removed_at) {
+    await supabase.auth.signOut()
+    throw new Error('This account no longer has portal access.')
+  }
   const actualRole = normalizeRole(profile.role)
   const roleMatches = requestedRole === actualRole
     || (requestedRole === 'admin' && actualRole === 'manager')

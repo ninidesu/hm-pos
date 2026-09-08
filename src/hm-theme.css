@@ -2425,3 +2425,137 @@ html[data-theme] .cashier-v2 .customize-product-info p {
     border-radius: 13px !important;
   }
 }
+
+/* Cashier cart palette: glossy deep-purple surfaces with white type. */
+html[data-theme] .cashier-v2 :is(.legacy-ticket > header, .legacy-ticket-total, .cashier-checkout-block) {
+  border-color: rgba(255, 255, 255, .24) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 255, 255, .18), transparent 32%),
+    linear-gradient(145deg, #6b368f 0%, #542475 48%, #2d0a4e 100%) !important;
+  color: #fff !important;
+}
+
+html[data-theme] .cashier-v2 .legacy-ticket > header :is(small, b) {
+  color: #fff !important;
+}
+
+html[data-theme] .cashier-v2 .cashier-order-icon {
+  border-color: rgba(255, 255, 255, .36) !important;
+  background: rgba(255, 255, 255, .14) !important;
+  color: #fff !important;
+}
+
+html[data-theme] .cashier-v2 .cashier-clear-cart {
+  border: 1px solid #8f2748 !important;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(255, 255, 255, .24), transparent 40%),
+    linear-gradient(145deg, #b54863 0%, #8f2748 56%, #6e1e36 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 8px 18px rgba(110, 30, 54, .28) !important;
+}
+
+html[data-theme] .cashier-v2 .cashier-clear-cart:hover,
+html[data-theme] .cashier-v2 .cashier-clear-cart:focus-visible {
+  border-color: #6e1e36 !important;
+  background:
+    radial-gradient(circle at 30% 0%, rgba(255, 255, 255, .2), transparent 40%),
+    linear-gradient(145deg, #9f3653 0%, #6e1e36 100%) !important;
+  color: #fff !important;
+}
+
+html[data-theme] .cashier-v2 .legacy-ticket-total :is(p, span, b, strong) {
+  color: #fff !important;
+}
+
+html[data-theme] .cashier-v2 .legacy-ticket-total hr {
+  border-color: rgba(255, 255, 255, .3) !important;
+}
+
+html[data-theme] .cashier-v2 .cashier-checkout-block .legacy-charge {
+  border: 1px solid #fff !important;
+  background: #fff !important;
+  color: #542475 !important;
+  box-shadow: 0 12px 26px rgba(33, 0, 52, .28) !important;
+}
+
+html[data-theme] .cashier-v2 .cashier-checkout-block .legacy-charge:hover,
+html[data-theme] .cashier-v2 .cashier-checkout-block .legacy-charge:focus-visible {
+  border-color: #f0e8f6 !important;
+  background: #f0e8f6 !important;
+  color: #2d0a4e !important;
+}
+
+/* Cashier top navigation: larger labels and consistent icon alignment. */
+html[data-theme] .cashier-v2 .legacy-cashier-top nav button {
+  gap: 9px !important;
+  font-size: .9rem !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav button svg {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-signout-button {
+  padding: 0 16px !important;
+}
+
+@media (max-width: 680px) {
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav button {
+    font-size: .78rem !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-signout-button {
+    padding: 0 12px !important;
+  }
+}
+
+/* Receipt preview backdrop: blur only, with no purple tint. */
+.cashier-v2 .cashier-receipt-backdrop,
+html[data-theme] .cashier-v2 .cashier-receipt-backdrop {
+  background: transparent !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+/* Keep the Back to POS label on one line at every cashier breakpoint. */
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-button {
+  min-width: 156px !important;
+  width: 156px !important;
+  flex: 0 0 156px;
+  white-space: nowrap !important;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-button.is-active {
+  min-width: 180px !important;
+  width: 180px !important;
+  flex-basis: 180px;
+}
+
+html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-button span {
+  white-space: nowrap !important;
+}
+
+@media (max-width: 680px) {
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-button {
+    min-width: 124px !important;
+    width: auto !important;
+    flex-basis: auto;
+    padding: 0 10px !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-button.is-active {
+    min-width: 136px !important;
+    width: auto !important;
+    flex-basis: auto;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-button span {
+    max-width: none !important;
+    overflow: visible;
+    text-overflow: clip;
+  }
+}

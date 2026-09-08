@@ -3,6 +3,7 @@ import {
   CreditCard,
   Expand,
   Landmark,
+  LogOut,
   Minus,
   Pencil,
   Plus,
@@ -364,6 +365,7 @@ export default function CashierPage() {
   const [transactionDetailsLoading, setTransactionDetailsLoading] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [mobileCartOpen, setMobileCartOpen] = useState(false)
   const [error, setError] = useState('')
   const [cashierProfile, setCashierProfile] = useState(null)
   const [savingOrder, setSavingOrder] = useState(false)
@@ -811,11 +813,11 @@ export default function CashierPage() {
           </div>
         </div>
         <nav>
-          <button type="button" className={showTransactions ? 'is-active' : ''} onClick={showTransactions ? returnToPos : openTransactions} aria-pressed={showTransactions}>
+          <button type="button" className={`cashier-workspace-nav-button ${showTransactions ? 'is-active' : ''}`} onClick={showTransactions ? returnToPos : openTransactions} aria-pressed={showTransactions}>
             {showTransactions ? <ShoppingBag size={21} /> : <ReceiptText size={21} />}
             <span>{showTransactions ? 'Back to POS' : 'Transactions'}</span>
           </button>
-          <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)}>Sign out</button>
+          <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)}><LogOut size={21} aria-hidden="true" /><span>Sign out</span></button>
         </nav>
       </header>
 
@@ -871,24 +873,28 @@ export default function CashierPage() {
             {!loading && filteredProducts.length === 0 ? <div className="cashier-empty-state"><Search size={28} /><b>No menu items found</b><span>Try another category or search term.</span></div> : null}
           </section>
 
-          <aside className="legacy-ticket" id="cashier-current-order">
+          <aside className={`legacy-ticket ${mobileCartOpen ? 'mobile-cart-open' : ''}`} id="cashier-current-order">
             <header>
-              <div><span className="cashier-order-icon"><ShoppingBag size={18} /></span><span><small>Current order</small><b>{activeOrder.id}</b></span></div>
-              <button type="button" className="cashier-clear-cart" onClick={() => setCart([])}>Clear Cart</button>
+              <div><span><small>Current order</small><b>{activeOrder.id}</b></span></div>
+              <div className="cashier-cart-header-actions">
+                <button type="button" className="cashier-clear-cart" onClick={() => setCart([])}>Clear Cart</button>
+                <button type="button" className="cashier-close-drawer" onClick={() => setMobileCartOpen(false)} aria-label="Close cart">&times;</button>
+              </div>
             </header>
             <div className="cashier-cart-count"><span>Items</span><b>{cartCount}</b></div>
             <POSCart cart={cart} onQty={changeQty} onEdit={editCartItem} />
             <div className="cashier-checkout-block">
               <OrderSummary subtotal={subtotal} total={total} breakdown={priceBreakdown} />
               {error ? <div className="cashier-error">{error}</div> : null}
-              <button type="button" className="legacy-charge" onClick={() => setShowCheckout(true)} disabled={!cart.length}>Checkout</button>
+              <button type="button" className="legacy-charge" onClick={() => { setMobileCartOpen(false); setShowCheckout(true) }} disabled={!cart.length}>Checkout</button>
             </div>
           </aside>
+          {mobileCartOpen ? <div className="cashier-cart-backdrop" onClick={() => setMobileCartOpen(false)} /> : null}
         </>}
       </main>
       {!showTransactions ? <div className="cashier-mobile-summary" aria-live="polite">
         <div><span>{cartCount} {cartCount === 1 ? 'item' : 'items'}</span><strong>{peso(total)}</strong></div>
-        <button type="button" onClick={() => document.getElementById('cashier-current-order')?.scrollIntoView({ behavior: 'smooth', block: 'start' })} disabled={!cart.length}>View order</button>
+        <button type="button" onClick={() => setMobileCartOpen(true)}><ShoppingBag size={16} /> View order</button>
       </div> : null}
       <LogoutConfirmModal open={logoutOpen} busy={loggingOut} onCancel={() => setLogoutOpen(false)} onConfirm={logout} />
 
@@ -936,7 +942,7 @@ function StockPreview({ stock }) {
 }
 
 function POSCart({ cart, onQty, onEdit }) {
-  return <div className="legacy-ticket-items">{cart.length === 0 ? <div className="cashier-empty-cart"><ShoppingBag size={58} strokeWidth={1.15} /><p>No items added yet.</p></div> : cart.map((item) => {
+  return <div className="legacy-ticket-items">{cart.length === 0 ? <div className="cashier-empty-cart"><p>No items added yet.</p></div> : cart.map((item) => {
     const editable = Boolean(item.allowSugar || item.allowIce || item.allowAddons || item.temperatureType || item.variantOptions?.length)
     return <article key={item.lineKey}>
       <img src={item.image} alt={item.name} />

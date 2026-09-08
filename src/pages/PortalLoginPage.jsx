@@ -28,6 +28,8 @@ const roleOptions = [
   },
 ]
 
+const portalScopeLabel = 'Admin · Point-of-sale · Transactions · Stock Management'
+
 export default function PortalLoginPage() {
   const storeInfo = useStoreInfo()
   const [role, setRole] = useState('admin')
@@ -74,7 +76,7 @@ export default function PortalLoginPage() {
             {storeInfo.logoUrl ? <img className="staff-portal__brand-logo" src={storeInfo.logoUrl} alt=""/> : null}
             <span>
               <strong>{storeInfo.name || 'HM POS'}</strong>
-              <small>Staff workspace</small>
+              <small>{portalScopeLabel}</small>
             </span>
           </a>
         </div>
@@ -87,7 +89,7 @@ export default function PortalLoginPage() {
 
       <section className="staff-portal__form-panel" aria-labelledby="staff-login-title">
         <div className="staff-portal__mobile-brand">
-          {storeInfo.logoUrl ? <img className="staff-portal__mobile-logo" src={storeInfo.logoUrl} alt=""/> : null}<span><strong>{storeInfo.name || 'HM POS'}</strong><small>Staff workspace</small></span>
+          {storeInfo.logoUrl ? <img className="staff-portal__mobile-logo" src={storeInfo.logoUrl} alt=""/> : null}<span><strong>{storeInfo.name || 'HM POS'}</strong><small>{portalScopeLabel}</small></span>
         </div>
 
         <div className="staff-portal__form-wrap">

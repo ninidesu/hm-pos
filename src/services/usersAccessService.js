@@ -11,8 +11,9 @@ const usersAccessSetupMessage = 'Users & Access needs its database migration bef
 
 function isMissingUsersAccessSchema(error) {
   const message = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
-  return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST204' ||
-    message.includes('portal_audit_events') || message.includes('admin_update_portal_user') || message.includes('last_active_at')
+  return error?.code === '42P01' || error?.code === '42703' || error?.code === 'PGRST202' || error?.code === 'PGRST204' ||
+    message.includes('portal_audit_events') || message.includes('admin_create_portal_user') ||
+    message.includes('admin_update_portal_user') || message.includes('admin_remove_portal_user') || message.includes('last_active_at')
 }
 
 function setupAwareError(error) {
@@ -46,44 +47,33 @@ export async function fetchManagedUsers() {
   }))
 }
 
-export async function invitePortalUser(values) {
-  const { data, error } = await supabase.functions.invoke('admin-manage-user', {
-    body: { action: 'invite', ...values },
+export async function createPortalUser(values) {
+  const { data, error } = await supabase.rpc('admin_create_portal_user', {
+    p_full_name: values.fullName,
+    p_username: values.username,
+    p_password: values.password,
+    p_role: values.role,
   })
   if (error) throw setupAwareError(error)
-  if (!data?.success) throw new Error(data?.error || 'Could not invite the user.')
-  return data.user
-}
-
-export async function sendPortalPasswordReset(userId) {
-  const { data, error } = await supabase.functions.invoke('admin-manage-user', {
-    body: { action: 'reset_password', userId },
-  })
-  if (error) throw setupAwareError(error)
-  if (!data?.success) throw new Error(data?.error || 'Could not send the password reset.')
+  return data
 }
 
 export async function removePortalUser(userId) {
-  const { data, error } = await supabase.functions.invoke('admin-manage-user', {
-    body: { action: 'remove', userId },
+  const { data, error } = await supabase.rpc('admin_remove_portal_user', {
+    p_user_id: userId,
   })
   if (error) throw setupAwareError(error)
-  if (!data?.success) throw new Error(data?.error || 'Could not remove the user.')
+  return data
 }
 
 export async function updatePortalUser(userId, values) {
-  const { data, error } = await supabase.functions.invoke('admin-manage-user', {
-    body: {
-      action: 'update',
-      userId,
-      username: values.username,
-      email: values.email,
-      password: values.password || undefined,
-    },
+  const { data, error } = await supabase.rpc('admin_update_portal_user_credentials', {
+    p_user_id: userId,
+    p_username: values.username,
+    p_password: values.password || null,
   })
   if (error) throw setupAwareError(error)
-  if (!data?.success) throw new Error(data?.error || 'Could not update the user.')
-  return data.user
+  return data
 }
 
 export async function updatePortalUserRole(userId, role) {

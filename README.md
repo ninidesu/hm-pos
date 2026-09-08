@@ -10,6 +10,7 @@ Standalone manager and cashier workspace for HM POS.
 - Inventory management with stock adjustments
 - Cashier account management
 - Cashier POS with Cash / GCash / Bank Transfer payments, receipt preview, and stock visibility on menu cards
+- Direct local portal account creation with username and password (no invitation, email, OTP, or Edge Function)
 
 ## Data policy
 
@@ -32,7 +33,9 @@ The installer does not create benefits, delivery-area, ingredient, recipe, finis
 
 If the previous HM POS schema has already been run in the same Supabase project and you want to discard its data, first run [`supabase/hm_pos_reset_existing_schema.sql`](supabase/hm_pos_reset_existing_schema.sql), then run `hm_pos_schema.sql`. The reset keeps `auth.users` login accounts but permanently deletes the previous HM POS tables and data.
 
-The system has exactly two portal accounts: one combined Admin / Manager account and one Cashier account. The first Auth user becomes `admin`; the second becomes `cashier`; a third HM POS account is rejected. Orders are walk-in only. The system stores no general customer contact details and has no delivery, pickup, cancellation, or refund workflow—completed orders can only be voided by Admin / Manager.
+If the canonical schema is already installed, apply [`supabase/migrations/20260908090000_direct_portal_user_management.sql`](supabase/migrations/20260908090000_direct_portal_user_management.sql) once, then apply [`supabase/migrations/20260909100000_allow_multiple_portal_users.sql`](supabase/migrations/20260909100000_allow_multiple_portal_users.sql). If the direct portal migration was already applied, only the newer migration is needed. Users & Access creates confirmed local accounts directly with a username and password; it does not send invitations, emails, or OTPs and does not require an Edge Function.
+
+The system supports multiple portal accounts with the `admin` and `cashier` roles. Usernames must be unique, and every account is created with a confirmed local password. Orders are walk-in only. The system stores no general customer contact details and has no delivery, pickup, cancellation, or refund workflow—completed orders can only be voided by Admin / Manager.
 
 The historical `supabase/migrations` folder is retained for reference; do not apply it to a new HM POS project after running the canonical installer.
 

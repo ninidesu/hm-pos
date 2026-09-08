@@ -1,7 +1,7 @@
 import {
   Activity, AlertTriangle, BadgeCheck, CalendarDays, ChevronLeft, ChevronRight,
-  CircleUserRound, Download, FilterX, History,
-  MailPlus, Pencil, Search, ShieldCheck, Trash2,
+  CircleUserRound, Download, Eye, EyeOff, FilterX, History,
+  Pencil, Search, ShieldCheck, Trash2,
   UserPlus, Users, X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -11,10 +11,10 @@ import { useAuth } from '../context/AuthContext'
 import { saveStaffUsername } from '../services/staffSettingsService'
 import { addCurrentUserNotification } from '../services/notificationCenterService'
 import { describeError } from '../utils/describeError'
-import { EMAIL_MAX_LENGTH, isValidEmail, sanitizePersonName, sanitizeUsername } from '../utils/inputValidation'
+import { isValidInternalPassword, sanitizePersonName, sanitizeUsername } from '../utils/inputValidation'
 import {
   PORTAL_ROLES, downloadAuditCsv, fetchManagedUsers, fetchPortalAuditEvents, fetchUserRecentActivity,
-  fetchPortalAuditExport, invitePortalUser, removePortalUser, updatePortalUser, updatePortalUserRole,
+  createPortalUser, fetchPortalAuditExport, removePortalUser, updatePortalUser, updatePortalUserRole,
 } from '../services/usersAccessService'
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100]
@@ -37,6 +37,11 @@ function initials(value) {
   return String(value || 'User').replace(/@.*$/, '').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('') || 'US'
 }
 
+function accountLoginLabel(email) {
+  const value = String(email || '').trim()
+  return /@(hm-pos\.local|local\.invalid)$/i.test(value) ? 'Username login · no email' : value || 'No email'
+}
+
 function useEscapeClose(open, onClose) {
   useEffect(() => {
     if (!open) return undefined
@@ -50,18 +55,18 @@ function useEscapeClose(open, onClose) {
 
 export default function UsersAccessPage() {
   const [refreshSignal, setRefreshSignal] = useState(0)
-  const [inviteOpen, setInviteOpen] = useState(false)
+  const [addOpen, setAddOpen] = useState(false)
 
   return <AppShell
     role="admin"
     title="Users & Access"
     onRefresh={() => setRefreshSignal((value) => value + 1)}
   >
-    <UserManagementModule refreshSignal={refreshSignal} inviteOpen={inviteOpen} setInviteOpen={setInviteOpen} />
+    <UserManagementModule refreshSignal={refreshSignal} addOpen={addOpen} setAddOpen={setAddOpen} />
   </AppShell>
 }
 
-function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
+function UserManagementModule({ refreshSignal, addOpen, setAddOpen }) {
   const { user: currentUser, updateProfile: updateCurrentProfile } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
@@ -107,6 +112,8 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
     admins: users.filter((item) => ['admin', 'manager'].includes(item.role)).length,
     cashiers: users.filter((item) => item.role === 'cashier').length,
   }), [users])
+  const availableRoles = PORTAL_ROLES
+  const defaultRole = 'cashier'
   const pageCount = Math.max(1, Math.ceil(filtered.length / USER_TABLE_PAGE_SIZE))
   const pagedUsers = useMemo(() => filtered.slice((page - 1) * USER_TABLE_PAGE_SIZE, page * USER_TABLE_PAGE_SIZE), [filtered, page])
   useEffect(() => { setPage(1) }, [query, role, sort])
@@ -117,10 +124,10 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
 
   return <section className="ua-module" aria-labelledby="user-management-title">
     <header className="ua-module-intro">
-      <div><span className="ua-module-icon"><Users size={20}/></span><div><h2 id="user-management-title">Users & Access</h2><p>Invite team members and manage their portal roles.</p></div></div>
+      <div><span className="ua-module-icon"><Users size={20}/></span><div><h2 id="user-management-title">Users & Access</h2><p>Create local portal accounts and manage their roles.</p></div></div>
       <div className="ua-module-intro-actions">
         <span className="ua-module-count">{filtered.length} of {users.length} users</span>
-        <button type="button" className="ua-primary-action" onClick={() => setInviteOpen(true)}><UserPlus size={17}/>Add User</button>
+        <button type="button" className="ua-primary-action" onClick={() => setAddOpen(true)}><UserPlus size={17}/>Add User</button>
       </div>
     </header>
 
@@ -154,7 +161,7 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
       {!filtered.length && <EmptyState icon={Users} title="No users found" message="Adjust the search or filters to see more accounts."/>}
     </>}
 
-    <InviteUserModal open={inviteOpen} onClose={() => setInviteOpen(false)} onSuccess={(message) => refreshAfterChange(message)} />
+    <AddPortalUserModal open={addOpen} defaultRole={defaultRole} availableRoles={availableRoles} onClose={() => setAddOpen(false)} onSuccess={(message) => refreshAfterChange(message)} />
     <UserDrawer user={selected} currentUserId={currentUser?.id} onClose={() => setSelected(null)} onEdit={() => { setEditTarget(selected); setSelected(null) }} onChanged={(message) => { setSelected(null); refreshAfterChange(message) }} />
     <EditUserModal user={editTarget} currentUserId={currentUser?.id} updateCurrentProfile={updateCurrentProfile} onClose={() => setEditTarget(null)} onChanged={(message) => { setEditTarget(null); refreshAfterChange(message) }} />
     {toast && <div className={`ua-toast ua-toast--${toast.tone}`} role="status"><BadgeCheck size={18}/>{toast.message}</div>}
@@ -163,34 +170,50 @@ function UserManagementModule({ refreshSignal, inviteOpen, setInviteOpen }) {
 
 function UserIdentity({ user }) {
   const name = user.username || user.full_name || user.email || 'Unnamed user'
-  return <div className="ua-user-identity"><span aria-hidden="true">{initials(name)}</span><div><b>{name}</b><small>{user.email}</small></div></div>
+  return <div className="ua-user-identity"><span aria-hidden="true">{initials(name)}</span><div><b>{name}</b><small>{accountLoginLabel(user.email)}</small></div></div>
 }
 
-function InviteUserModal({ open, onClose, onSuccess }) {
-  const [values, setValues] = useState({ fullName: '', email: '', username: '', role: 'cashier' })
+function AddPortalUserModal({ open, defaultRole, availableRoles, onClose, onSuccess }) {
+  const [values, setValues] = useState({ fullName: '', username: '', password: '', role: defaultRole })
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   useEscapeClose(open, onClose)
-  useEffect(() => { if (open) { setValues({ fullName: '', email: '', username: '', role: 'cashier' }); setError('') } }, [open])
+  useEffect(() => {
+    if (open) {
+      setValues({ fullName: '', username: '', password: '', role: defaultRole })
+      setShowPassword(false)
+      setError('')
+    }
+  }, [open, defaultRole])
   if (!open) return null
   const submit = async (event) => {
     event.preventDefault(); setError('')
-    if (!isValidEmail(values.email)) { setError('Enter a valid email address.'); return }
+    const fullName = values.fullName.trim()
+    const username = values.username.trim()
+    if (!fullName) { setError('Enter the user’s full name.'); return }
+    if (!/^[A-Za-z0-9._-]{3,24}$/.test(username)) { setError('Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens.'); return }
+    if (!isValidInternalPassword(values.password)) { setError('Password must be 8 to 32 characters.'); return }
+    if (!PORTAL_ROLES.some((item) => item.value === values.role)) { setError('Choose a valid portal role.'); return }
     setBusy(true)
-    try { await invitePortalUser(values); onClose(); onSuccess(`${values.fullName} was added. Sign-in instructions were sent to ${values.email}.`) }
-    catch (cause) { setError(describeError(cause, 'Could not invite this user.')) }
+    try {
+      await createPortalUser({ ...values, fullName, username })
+      onClose()
+      onSuccess(`${fullName} was added. They can sign in with their username and password.`)
+    } catch (cause) { setError(describeError(cause, 'Could not add this user.')) }
     finally { setBusy(false) }
   }
-  return <div className="ua-overlay" onMouseDown={onClose}><form className="ua-modal" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="invite-user-title">
-    <header><div><span className="ua-modal-icon"><MailPlus size={20}/></span><div><h2 id="invite-user-title">Add portal user</h2><p>Send a secure invitation to an internal team member.</p></div></div><button type="button" onClick={onClose} aria-label="Close add user dialog"><X/></button></header>
+  const roleOptions = availableRoles.length ? availableRoles : PORTAL_ROLES
+  return <div className="ua-overlay" onMouseDown={onClose}><form className="ua-modal" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="add-user-title">
+    <header><div><span className="ua-modal-icon"><UserPlus size={20}/></span><div><h2 id="add-user-title">Add portal user</h2><p>Create login credentials directly. No email, OTP, or invitation is sent.</p></div></div><button type="button" onClick={onClose} aria-label="Close add user dialog"><X/></button></header>
     <div className="ua-form-grid">
       <label className="ua-field ua-field--wide"><span>Full name</span><input autoFocus required maxLength={60} value={values.fullName} onChange={(event) => setValues({ ...values, fullName: sanitizePersonName(event.target.value, 60) })} autoComplete="name"/></label>
-       <label className="ua-field"><span>Email</span><input required type="email" maxLength={EMAIL_MAX_LENGTH} value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value.slice(0, EMAIL_MAX_LENGTH) })} autoComplete="email"/></label>
-      <label className="ua-field"><span>Username <small>Optional</small></span><input value={values.username} onChange={(event) => setValues({ ...values, username: sanitizeUsername(event.target.value, 24) })} autoComplete="username" minLength={3} maxLength={24} pattern="[A-Za-z0-9._-]+"/></label>
-      <label className="ua-field ua-field--wide"><span>Portal role</span><select value={values.role} onChange={(event) => setValues({ ...values, role: event.target.value })}><option value="admin">Admin / Manager</option><option value="cashier">Cashier</option></select><small>Admin / Manager accounts manage the system; cashiers receive POS checkout access.</small></label>
+      <label className="ua-field"><span>Username</span><input required value={values.username} onChange={(event) => setValues({ ...values, username: sanitizeUsername(event.target.value, 24) })} autoComplete="username" autoCapitalize="none" spellCheck="false" minLength={3} maxLength={24} pattern="[A-Za-z0-9._-]+"/><small>Used to sign in to the portal.</small></label>
+      <label className="ua-field"><span>Password</span><span className="ua-password-control"><input required type={showPassword ? 'text' : 'password'} value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 32) })} autoComplete="new-password" minLength={8} maxLength={32} pattern=".{8,32}"/><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={17} aria-hidden="true"/> : <Eye size={17} aria-hidden="true"/>}</button></span><small>Use 8–32 characters. Share it securely with the cashier.</small></label>
+      <label className="ua-field ua-field--wide"><span>Portal role</span><select value={values.role} onChange={(event) => setValues({ ...values, role: event.target.value })}>{roleOptions.map((item) => <option value={item.value} key={item.value}>{item.label}</option>)}</select><small>Admin / Manager accounts manage the system; cashiers receive POS checkout access.</small></label>
     </div>
     {error && <p className="ua-form-error" role="alert">{error}</p>}
-    <footer><button type="button" className="ua-secondary-action" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="ua-primary-action" disabled={busy}>{busy ? 'Sending invitation…' : 'Send invitation'}</button></footer>
+    <footer><button type="button" className="ua-secondary-action" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="ua-primary-action" disabled={busy}>{busy ? 'Confirming…' : 'Confirm'}</button></footer>
   </form></div>
 }
 
@@ -217,7 +240,7 @@ function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
     finally { setBusy(false) }
   }
   return <><button className="ua-drawer-scrim" onClick={onClose} aria-label="Close user details"/><aside className="ua-drawer" role="dialog" aria-modal="true" aria-labelledby="user-drawer-title">
-    <header><div><span className="ua-drawer-avatar">{initials(user.username || user.full_name || user.email)}</span><div><h2 id="user-drawer-title">{user.username || user.full_name || user.email}</h2><p>{user.email}</p></div></div><button autoFocus type="button" onClick={onClose} aria-label="Close user details"><X/></button></header>
+    <header><div><span className="ua-drawer-avatar">{initials(user.username || user.full_name || user.email)}</span><div><h2 id="user-drawer-title">{user.username || user.full_name || user.email}</h2><p>{accountLoginLabel(user.email)}</p></div></div><button autoFocus type="button" onClick={onClose} aria-label="Close user details"><X/></button></header>
     <div className="ua-drawer-body">
       <section><div className="ua-section-heading"><ShieldCheck size={18}/><div><h3>Access controls</h3><p>Changes take effect the next time access is checked.</p></div></div>
         <label className="ua-field"><span>Portal role</span><select value={role} onChange={(event) => setRole(event.target.value)} disabled={isSelf}>{PORTAL_ROLES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
@@ -236,13 +259,13 @@ function UserDrawer({ user, currentUserId, onClose, onEdit, onChanged }) {
 }
 
 function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onChanged }) {
-  const [values, setValues] = useState({ username: '', email: '', password: '' })
+  const [values, setValues] = useState({ username: '', password: '' })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   useEscapeClose(Boolean(user) && !busy, onClose)
   useEffect(() => {
     if (!user) return
-    setValues({ username: user.username || '', email: user.email || '', password: '' })
+    setValues({ username: user.username || '', password: '' })
     setBusy(false)
     setError('')
   }, [user])
@@ -253,17 +276,15 @@ function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onC
     setError('')
     const username = values.username.trim()
     if (!/^[A-Za-z0-9._-]{3,24}$/.test(username)) return setError('Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens.')
-    const email = isCurrentAdmin ? undefined : values.email.trim().toLowerCase()
     const password = isCurrentAdmin ? undefined : values.password
-    if (!isCurrentAdmin && !isValidEmail(email)) return setError('Enter a valid email address.')
-    if (password && (password.length < 8 || password.length > 72)) return setError('Password must be 8 to 72 characters.')
+    if (password && !isValidInternalPassword(password)) return setError('Password must be 8 to 32 characters.')
     setBusy(true)
     try {
       if (isCurrentAdmin) {
         const updatedUser = await saveStaffUsername(user.id, username)
         updateCurrentProfile?.((current) => current ? { ...current, username: updatedUser.username } : current)
       } else {
-        await updatePortalUser(user.id, { username, email, password })
+        await updatePortalUser(user.id, { username, password })
       }
       onChanged(`${username} was updated.`)
     } catch (cause) {
@@ -274,11 +295,10 @@ function EditUserModal({ user, currentUserId, updateCurrentProfile, onClose, onC
   }
   return <div className="ua-overlay" onMouseDown={busy ? undefined : onClose}>
     <form className="ua-modal ua-edit-user-modal" onSubmit={submit} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="edit-user-title">
-      <header><div><span className="ua-modal-icon"><Pencil size={20}/></span><div><h2 id="edit-user-title">Edit {user.role === 'cashier' ? 'cashier' : 'admin'} account</h2><p>{isCurrentAdmin ? 'Update your administration username.' : 'Update this user’s sign-in details.'}</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close edit user dialog"><X/></button></header>
+      <header><div><span className="ua-modal-icon"><Pencil size={20}/></span><div><h2 id="edit-user-title">Edit {user.role === 'cashier' ? 'cashier' : 'admin'} account</h2><p>{isCurrentAdmin ? 'Update your administration username.' : 'Update this user’s username or password. No email is sent.'}</p></div></div><button type="button" onClick={onClose} disabled={busy} aria-label="Close edit user dialog"><X/></button></header>
       <div className="ua-form-grid">
         <label className="ua-field ua-field--wide"><span>Username</span><input required value={values.username} onChange={(event) => setValues({ ...values, username: sanitizeUsername(event.target.value, 24) })} autoComplete="username" minLength={3} maxLength={24} pattern="[A-Za-z0-9._-]+"/></label>
-        {!isCurrentAdmin && <><label className="ua-field ua-field--wide"><span>Email</span><input required type="email" value={values.email} onChange={(event) => setValues({ ...values, email: event.target.value.slice(0, EMAIL_MAX_LENGTH) })} autoComplete="email" maxLength={EMAIL_MAX_LENGTH}/></label>
-        <label className="ua-field ua-field--wide"><span>Password</span><input type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 72) })} autoComplete="new-password" minLength={values.password ? 8 : undefined} maxLength={72} placeholder="Enter a new password"/><small>Existing passwords cannot be displayed. Leave blank to keep the current password.</small></label></>}
+        {!isCurrentAdmin && <label className="ua-field ua-field--wide"><span>Password</span><input type="password" value={values.password} onChange={(event) => setValues({ ...values, password: event.target.value.slice(0, 32) })} autoComplete="new-password" minLength={values.password ? 8 : undefined} maxLength={32} placeholder="Enter a new password"/><small>Existing passwords cannot be displayed. Leave blank to keep the current password.</small></label>}
       </div>
       {error && <p className="ua-form-error" role="alert">{error}</p>}
       <footer><button type="button" className="ua-secondary-action" onClick={onClose} disabled={busy}>Cancel</button><button type="submit" className="ua-primary-action" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button></footer>

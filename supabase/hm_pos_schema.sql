@@ -1,12 +1,12 @@
 -- HM POS · walk-in-only Supabase schema
 --
 -- Run once in the SQL Editor of a fresh Supabase project.
--- The system has exactly two portal roles:
+-- The system supports multiple portal accounts with two roles:
 --   1. admin  = the combined Admin / Manager account
 --   2. cashier
 --
--- The first Auth user created after this script becomes admin. The second
--- becomes cashier. A third public POS user is rejected.
+-- The first Auth user created after this script becomes admin and the next
+-- becomes cashier. Additional portal accounts are created by an administrator.
 --
 -- Core tables:
 --   public.users
@@ -60,12 +60,7 @@ create table if not exists public.users (
   updated_at timestamptz not null default now()
 );
 
--- One admin/manager and one cashier means public.users can contain at most
--- two rows. Supabase Auth may still hold system identities, but only these
--- two rows can access HM POS.
-create unique index if not exists users_one_account_per_role_idx
-  on public.users (role)
-  where removed_at is null;
+-- Usernames are unique; each portal role may have multiple active accounts.
 
 create or replace function public.hm_pos_is_admin()
 returns boolean
@@ -140,19 +135,21 @@ set search_path = public
 as $$
 declare
   v_role text;
+  v_requested_role text := public.normalize_role(new.raw_user_meta_data ->> 'hm_pos_role');
+  v_internal_account boolean := coalesce(new.raw_app_meta_data ->> 'hm_pos_internal_account', 'false') = 'true';
 begin
-  perform pg_advisory_xact_lock(hashtextextended('hm_pos_two_user_slots', 0));
-
   if exists (select 1 from public.users where id = new.id) then
     return new;
   end if;
 
-  if not exists (select 1 from public.users where role = 'admin' and removed_at is null) then
+  if v_internal_account and v_requested_role in ('admin', 'cashier') then
+    v_role := v_requested_role;
+  elsif not exists (select 1 from public.users where role = 'admin' and removed_at is null) then
     v_role := 'admin';
   elsif not exists (select 1 from public.users where role = 'cashier' and removed_at is null) then
     v_role := 'cashier';
   else
-    raise exception 'HM POS supports only one Admin / Manager and one Cashier account';
+    raise exception 'HM POS requires administrator-created portal accounts';
   end if;
 
   insert into public.users (id, email, full_name, username, role)
@@ -880,7 +877,198 @@ begin
   update public.users set role = v_role where id = p_user_id and removed_at is null returning * into v_row;
   if not found then raise exception 'User not found'; end if;
   return v_row;
-exception when unique_violation then raise exception 'HM POS allows only one account for each role';
+end;
+$$;
+
+-- Create internal accounts directly in Auth with a confirmed password. This
+-- keeps user provisioning inside the database and does not send email, OTP,
+-- or invitation messages.
+create or replace function public.admin_create_portal_user(
+  p_full_name text,
+  p_username text,
+  p_password text,
+  p_role text
+) returns public.users
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  v_actor public.users%rowtype;
+  v_row public.users%rowtype;
+  v_user_id uuid := gen_random_uuid();
+  v_full_name text := btrim(coalesce(p_full_name, ''));
+  v_username text := btrim(coalesce(p_username, ''));
+  v_password text := coalesce(p_password, '');
+  v_role text := public.normalize_role(p_role);
+  v_email text;
+begin
+  perform public.hm_pos_assert_admin();
+  perform pg_advisory_xact_lock(hashtextextended('hm_pos_portal_user_creation', 0));
+
+  select * into v_actor
+  from public.users
+  where id = auth.uid() and role = 'admin' and is_active and removed_at is null;
+  if not found then raise exception 'Administrator access required'; end if;
+  if v_role not in ('admin', 'cashier') then raise exception 'Role must be Admin / Manager or Cashier'; end if;
+  if char_length(v_full_name) < 2 or char_length(v_full_name) > 60
+     or v_full_name !~ '^[[:alpha:]][[:alpha:] .''-]{1,59}$' then
+    raise exception 'Full name must be 2 to 60 letters';
+  end if;
+  if v_username !~ '^[A-Za-z0-9._-]{3,24}$' then
+    raise exception 'Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens';
+  end if;
+  if char_length(v_password) not between 8 and 32 then
+    raise exception 'Password must be 8 to 32 characters';
+  end if;
+  if exists (select 1 from public.users where lower(username) = lower(v_username)) then
+    raise exception 'That username is already in use';
+  end if;
+
+  -- An internal email-shaped identifier satisfies Supabase Auth's identity
+  -- model while keeping the portal username as the only user-facing login.
+  v_email := lower(v_username) || '@hm-pos.local';
+  if exists (select 1 from auth.users where lower(email) = v_email) then
+    raise exception 'That username is already in use';
+  end if;
+
+  insert into auth.users (
+    id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+  ) values (
+    v_user_id, 'authenticated', 'authenticated', v_email,
+    crypt(v_password, gen_salt('bf')), now(),
+    jsonb_build_object('provider', 'email', 'providers', jsonb_build_array('email'), 'hm_pos_internal_account', true),
+    jsonb_build_object('full_name', v_full_name, 'username', v_username, 'hm_pos_role', v_role),
+    now(), now()
+  );
+
+  select * into v_row from public.users where id = v_user_id;
+  if not found then raise exception 'The portal profile could not be created'; end if;
+
+  insert into public.portal_audit_events (
+    actor_id, actor_name_snapshot, actor_role_snapshot, surface, module, action,
+    entity_type, entity_id, entity_label, summary, result, severity, after_data, metadata
+  ) values (
+    v_actor.id, coalesce(v_actor.full_name, v_actor.username, v_actor.email), 'admin', 'admin',
+    'users_access', 'user.created', 'profile', v_row.id::text, v_row.username,
+    coalesce(v_actor.full_name, v_actor.username, v_actor.email) || ' added ' || v_row.username,
+    'success', 'info',
+    jsonb_build_object('full_name', v_row.full_name, 'username', v_row.username, 'role', v_row.role),
+    jsonb_build_object('local_login', true, 'email_sent', false, 'otp_used', false)
+  );
+  return v_row;
+exception when unique_violation then
+  raise exception 'That username is already in use';
+end;
+$$;
+
+-- Update another portal user's local credentials without a service-role
+-- client or an email-change workflow.
+create or replace function public.admin_update_portal_user_credentials(
+  p_user_id uuid,
+  p_username text,
+  p_password text default null
+) returns public.users
+language plpgsql
+security definer
+set search_path = public, auth, extensions
+as $$
+declare
+  v_actor public.users%rowtype;
+  v_current public.users%rowtype;
+  v_row public.users%rowtype;
+  v_username text := btrim(coalesce(p_username, ''));
+  v_password text := coalesce(p_password, '');
+begin
+  perform public.hm_pos_assert_admin();
+  select * into v_actor from public.users where id = auth.uid() and role = 'admin' and is_active and removed_at is null;
+  if not found then raise exception 'Administrator access required'; end if;
+  select * into v_current from public.users where id = p_user_id and is_active and removed_at is null for update;
+  if not found then raise exception 'User not found'; end if;
+  if p_user_id = auth.uid() then raise exception 'Use your profile settings to update your own account'; end if;
+  if v_username !~ '^[A-Za-z0-9._-]{3,24}$' then
+    raise exception 'Username must be 3 to 24 letters, numbers, dots, underscores, or hyphens';
+  end if;
+  if v_password <> '' and char_length(v_password) not between 8 and 32 then
+    raise exception 'Password must be 8 to 32 characters';
+  end if;
+  if exists (select 1 from public.users where id <> p_user_id and lower(username) = lower(v_username)) then
+    raise exception 'That username is already in use';
+  end if;
+
+  update auth.users
+  set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb) || jsonb_build_object('username', v_username),
+      encrypted_password = case when v_password = '' then encrypted_password else crypt(v_password, gen_salt('bf')) end,
+      updated_at = now()
+  where id = p_user_id;
+  if not found then raise exception 'Authentication account not found'; end if;
+
+  update public.users
+  set username = v_username, updated_at = now()
+  where id = p_user_id
+  returning * into v_row;
+
+  insert into public.portal_audit_events (
+    actor_id, actor_name_snapshot, actor_role_snapshot, surface, module, action,
+    entity_type, entity_id, entity_label, summary, result, severity, before_data, after_data, metadata
+  ) values (
+    v_actor.id, coalesce(v_actor.full_name, v_actor.username, v_actor.email), 'admin', 'admin',
+    'users_access', 'user.credentials_updated', 'profile', v_row.id::text, v_row.username,
+    coalesce(v_actor.full_name, v_actor.username, v_actor.email) || ' updated ' || v_row.username,
+    'success', 'info', jsonb_build_object('username', v_current.username),
+    jsonb_build_object('username', v_row.username, 'password_changed', v_password <> ''),
+    jsonb_build_object('local_login', true)
+  );
+  return v_row;
+exception when unique_violation then
+  raise exception 'That username is already in use';
+end;
+$$;
+
+-- Keep the profile row for historical order references, but block the user
+-- from future portal access without calling an Edge Function.
+create or replace function public.admin_remove_portal_user(p_user_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_actor public.users%rowtype;
+  v_current public.users%rowtype;
+  v_removed_at timestamptz := now();
+begin
+  perform public.hm_pos_assert_admin();
+  select * into v_actor from public.users where id = auth.uid() and role = 'admin' and is_active and removed_at is null;
+  if not found then raise exception 'Administrator access required'; end if;
+  select * into v_current from public.users where id = p_user_id and removed_at is null for update;
+  if not found then raise exception 'User not found'; end if;
+  if p_user_id = auth.uid() then raise exception 'You cannot remove your own administrator account'; end if;
+  if v_current.role = 'admin' and not exists (
+    select 1 from public.users
+    where id <> p_user_id and role = 'admin' and is_active and removed_at is null
+  ) then
+    raise exception 'At least one administrator is required';
+  end if;
+
+  update public.users
+  set is_active = false, removed_at = v_removed_at, updated_at = v_removed_at
+  where id = p_user_id;
+
+  insert into public.portal_audit_events (
+    actor_id, actor_name_snapshot, actor_role_snapshot, surface, module, action,
+    entity_type, entity_id, entity_label, summary, result, severity, before_data, after_data, metadata
+  ) values (
+    v_actor.id, coalesce(v_actor.full_name, v_actor.username, v_actor.email), 'admin', 'admin',
+    'users_access', 'user.removed', 'profile', v_current.id::text,
+    coalesce(v_current.username, v_current.full_name, v_current.email),
+    coalesce(v_actor.full_name, v_actor.username, v_actor.email) || ' removed ' || coalesce(v_current.username, v_current.email),
+    'success', 'critical',
+    jsonb_build_object('is_active', v_current.is_active, 'role', v_current.role),
+    jsonb_build_object('is_active', false, 'removed_at', v_removed_at),
+    jsonb_build_object('email_sent', false, 'otp_used', false)
+  );
 end;
 $$;
 
@@ -947,6 +1135,9 @@ grant execute on function public.staff_adjust_stock(uuid, numeric, text) to auth
 grant execute on function public.create_cashier_order(jsonb) to authenticated;
 grant execute on function public.staff_void_order(uuid, text) to authenticated;
 grant execute on function public.admin_update_portal_user(uuid, text) to authenticated;
+grant execute on function public.admin_create_portal_user(text, text, text, text) to authenticated;
+grant execute on function public.admin_update_portal_user_credentials(uuid, text, text) to authenticated;
+grant execute on function public.admin_remove_portal_user(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Storage used by the menu and optional in-store payment QR configuration
