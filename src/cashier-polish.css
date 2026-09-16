@@ -8791,3 +8791,683 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
     min-width: 140px !important;
   }
 }
+
+/* ==========================================================================
+   Operating Hours (6:00 AM - 10:00 PM) & End of Day (EOD) Styling
+   ========================================================================== */
+
+/* Outside Operating Hours Top Banner (matches mockup design) */
+.cashier-closed-banner {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  margin: 12px 18px 0;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.08);
+  animation: cashierSlideDown 0.25s ease-out;
+}
+
+.cashier-closed-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cashier-closed-banner-icon {
+  color: #dc2626;
+  flex-shrink: 0;
+}
+
+.cashier-closed-banner-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.cashier-closed-banner-title {
+  color: #991b1b;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.cashier-closed-banner-subtitle {
+  color: #991b1b;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.cashier-closed-banner-eod-btn {
+  position: absolute;
+  right: 16px;
+  background: #ffffff;
+  color: #991b1b;
+  border: 1px solid #f87171;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-closed-banner-eod-btn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+@keyframes cashierSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Centered POS Closed Alert Modal (matches mockup design) */
+.cashier-closed-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 16px;
+  animation: cashierFadeIn 0.2s ease;
+}
+
+.cashier-closed-modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 36px 32px 30px;
+  max-width: 440px;
+  width: 92%;
+  text-align: center;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.3);
+  animation: cashierPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cashier-closed-modal-icon-badge {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #f3e8ff;
+  color: #542475;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  border: 3px solid #d8b4fe;
+}
+
+.cashier-closed-modal-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #1e1b4b;
+  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+}
+
+.cashier-closed-modal-subtitle {
+  font-size: 15px;
+  color: #4b5563;
+  margin: 0 0 28px;
+  line-height: 1.55;
+}
+
+.cashier-closed-modal-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.cashier-closed-modal-btn {
+  background: #542475;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 13px 48px;
+  min-width: 150px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(84, 36, 117, 0.28);
+  transition: all 0.15s ease;
+}
+
+.cashier-closed-modal-btn:hover {
+  background: #3f155b;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(84, 36, 117, 0.36);
+}
+
+.cashier-closed-modal-secondary-btn {
+  background: transparent;
+  color: #542475;
+  border: 1px solid #d8b4fe;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-closed-modal-secondary-btn:hover {
+  background: #faf5ff;
+  border-color: #c084fc;
+}
+
+@keyframes cashierFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cashierPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* POS Closed state visual cues */
+.is-pos-closed .cashier-new-order,
+.is-pos-closed .legacy-charge,
+.is-pos-closed .cashier-clear-cart {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+}
+
+.is-pos-closed .cashier-product-card.is-disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
+}
+
+.is-pos-closed .cashier-qty-stepper button:disabled,
+.is-pos-closed .cashier-edit-line:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+/* End of Day (EOD) Modal & Dashboard */
+.cashier-eod-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99998;
+  padding: 16px;
+  animation: cashierFadeIn 0.2s ease;
+}
+
+.cashier-eod-modal {
+  max-width: 760px;
+  width: 100%;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  animation: cashierPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cashier-eod-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: #faf8fc;
+}
+
+.cashier-eod-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #542475;
+  background: #f3e8ff;
+  border: 1px solid #e9d5ff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cashier-eod-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e1b4b;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.cashier-eod-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.cashier-eod-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cashier-eod-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-eod-print-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.cashier-eod-close-btn {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-eod-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Toolbar & Filters */
+.cashier-eod-toolbar {
+  padding: 12px 24px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.cashier-eod-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: #475569;
+}
+
+.cashier-eod-input {
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  outline: none;
+}
+
+.cashier-eod-cashier-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.cashier-eod-pill {
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-eod-pill.active {
+  background: #542475;
+  color: #ffffff;
+  border-color: #542475;
+}
+
+.cashier-eod-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-eod-refresh-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.cashier-eod-refresh-btn .spinning {
+  animation: cashierSpin 0.75s linear infinite;
+}
+
+@keyframes cashierSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Modal Body */
+.cashier-eod-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cashier-eod-meta-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  background: #faf8fc;
+  border: 1px solid #eedbf7;
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+
+.cashier-eod-meta-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.cashier-eod-meta-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7c3aed;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+}
+
+.cashier-eod-meta-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e1b4b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inline-icon {
+  color: #7c3aed;
+}
+
+/* Metrics Grid */
+.cashier-eod-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+@media (min-width: 600px) {
+  .cashier-eod-metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.cashier-eod-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cashier-eod-metric-card.highlight-net {
+  background: #fbf7ff;
+  border-color: #d8b4fe;
+}
+
+.cashier-eod-metric-card.highlight-net .cashier-eod-metric-amount {
+  color: #542475;
+}
+
+.cashier-eod-metric-card.highlight-collected {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.cashier-eod-metric-card.highlight-collected .cashier-eod-metric-amount {
+  color: #166534;
+}
+
+.cashier-eod-metric-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.cashier-eod-metric-amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.cashier-eod-metric-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.text-negative {
+  color: #dc2626 !important;
+}
+
+/* Payment Breakdown Table */
+.cashier-eod-breakdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cashier-eod-section-heading {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 4px;
+}
+
+.cashier-eod-payment-table {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.cashier-eod-table-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.5fr;
+  padding: 10px 16px;
+  align-items: center;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cashier-eod-table-row:last-child {
+  border-bottom: none;
+}
+
+.cashier-eod-table-head {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #475569;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cashier-eod-table-total {
+  background: #faf8fc;
+  font-weight: 800;
+  color: #542475;
+  border-top: 2px solid #e9d5ff;
+}
+
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 800; }
+
+/* Modal Footer */
+.cashier-eod-footer {
+  padding: 14px 24px;
+  background: #ffffff;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cashier-eod-footer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.cashier-eod-footer-status .text-success {
+  color: #16a34a;
+}
+
+.cashier-eod-done-btn {
+  background: #542475;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 9px 24px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-eod-done-btn:hover {
+  background: #3f155b;
+}
+
+.cashier-eod-print-footer {
+  display: none;
+}
+
+/* Button in Transactions View Header */
+.cashier-transactions-eod-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #f3e8ff;
+  color: #542475;
+  border: 1px solid #d8b4fe;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cashier-transactions-eod-action:hover {
+  background: #e9d5ff;
+  border-color: #c084fc;
+}
+
+/* Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .cashier-eod-backdrop,
+  .printable-eod-area,
+  .printable-eod-area * {
+    visibility: visible;
+  }
+  .cashier-eod-backdrop {
+    position: absolute;
+    inset: 0;
+    background: transparent;
+    padding: 0;
+  }
+  .cashier-eod-modal {
+    box-shadow: none;
+    border: none;
+    max-height: none;
+  }
+  .cashier-eod-header-actions,
+  .cashier-eod-toolbar,
+  .cashier-eod-footer {
+    display: none !important;
+  }
+  .cashier-eod-print-footer {
+    display: block;
+    margin-top: 24px;
+    text-align: center;
+    font-size: 11px;
+    color: #000000;
+    border-top: 1px dashed #000;
+    padding-top: 12px;
+  }
+}
+

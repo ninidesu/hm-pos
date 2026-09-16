@@ -2,6 +2,7 @@ import {
   Banknote,
   CreditCard,
   Expand,
+  FileSpreadsheet,
   Landmark,
   LogOut,
   Minus,
@@ -12,15 +13,19 @@ import {
   ShoppingBag,
   Wallet,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import LogoutConfirmModal from '../components/auth/LogoutConfirmModal'
+import CashierClosedBanner from '../components/CashierClosedBanner'
+import CashierClosedModal from '../components/CashierClosedModal'
+import CashierEodModal from '../components/CashierEodModal'
 import { usePricing } from '../context/usePricing'
 import { getCurrentPortalSession, signOutPortal } from '../lib/auth'
 import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizeDecimal, sanitizeDigits, sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
+import { getBusinessDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
 import { buildVatExemptOrderBreakdown } from '../utils/pricing'
 import useStoreInfo from '../hooks/useStoreInfo'
 import { StoreReceiptBrand, StoreReceiptFooter } from '../components/StoreReceiptBrand'
@@ -365,6 +370,8 @@ export default function CashierPage() {
   const [transactionDetails, setTransactionDetails] = useState(null)
   const [transactionDetailsLoading, setTransactionDetailsLoading] = useState(false)
   const [showCheckout, setShowCheckout] = useState(false)
+  const [showEodModal, setShowEodModal] = useState(false)
+  const [showClosedModal, setShowClosedModal] = useState(() => getOperatingHoursStatus().isClosed)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [mobileCartOpen, setMobileCartOpen] = useState(false)
   const [error, setError] = useState('')
@@ -485,6 +492,22 @@ export default function CashierPage() {
     return () => window.clearInterval(clockTimer)
   }, [])
 
+  const operatingStatus = useMemo(() => getOperatingHoursStatus(clock), [clock])
+  const isPosClosed = operatingStatus.isClosed
+  const prevIsOpenRef = useRef(operatingStatus.isOpen)
+
+  useEffect(() => {
+    // Automatically close selling session when transitioning to closed (at exactly 10:00 PM)
+    if (prevIsOpenRef.current && operatingStatus.isClosed) {
+      setShowCheckout(false)
+      setCustomizingProduct(null)
+      setMobileCartOpen(false)
+      setShowClosedModal(true)
+      setShowEodModal(true)
+    }
+    prevIsOpenRef.current = operatingStatus.isOpen
+  }, [operatingStatus.isOpen, operatingStatus.isClosed])
+
   useEffect(() => {
     try {
       window.localStorage.setItem(CASHIER_WORKSPACE_STORAGE_KEY, JSON.stringify({
@@ -564,6 +587,10 @@ export default function CashierPage() {
   const cashierStatusDescription = `${cashierStatus.detail}. ${cashierSyncTime ? `Last updated ${cashierSyncTime}.` : 'Waiting for the first live sync.'}`
 
   function openNewOrderTab() {
+    if (isPosClosed) {
+      setShowClosedModal(true)
+      return
+    }
     setOrderTabs((current) => {
       if (current.length >= MAX_OPEN_ORDER_TABS) return current
       const nextTab = createOrderTab(nextOrderTabId(current))
@@ -600,7 +627,7 @@ export default function CashierPage() {
   }
 
   function addConfiguredItem(product, customizations = {}, addons = [], quantity = 1) {
-    if (!product.price || !product.isAvailable) return
+    if (isPosClosed || !product.price || !product.isAvailable) return
     setCart((current) => {
       const lineKey = makeLineKey(product, customizations, addons)
       const existing = current.find((item) => item.lineKey === lineKey)
@@ -610,6 +637,10 @@ export default function CashierPage() {
   }
 
   function addToCart(product) {
+    if (isPosClosed) {
+      setShowClosedModal(true)
+      return
+    }
     if (!product.price || !product.isAvailable) return
     if (shouldCustomize(product)) {
       setCustomizingProduct(product)
@@ -618,14 +649,17 @@ export default function CashierPage() {
     addConfiguredItem(product)
   }
   function changeQty(lineKey, delta) {
+    if (isPosClosed) return
     setCart((current) => current.map((item) => item.lineKey === lineKey ? { ...item, qty: Math.min(99, Math.max(0, item.qty + delta)) } : item).filter((item) => item.qty > 0))
   }
 
   function editCartItem(item) {
+    if (isPosClosed) return
     setCustomizingProduct(item)
   }
 
   function updateConfiguredItem(item, customizations, addons, quantity) {
+    if (isPosClosed) return
     setCart((current) => {
       const withoutOriginal = current.filter((line) => line.lineKey !== item.lineKey)
       const lineKey = makeLineKey(item, customizations, addons)
@@ -637,6 +671,10 @@ export default function CashierPage() {
   async function saveOrder() {
     if (savingOrder) return false
     setError('')
+    if (getOperatingHoursStatus(new Date()).isClosed) {
+      setShowClosedModal(true)
+      return setError('POS is currently closed. Operating hours are 6:00 AM – 10:00 PM.')
+    }
     if (!isSupabaseConfigured) return setError('Supabase is not configured yet. Add the POS environment variables before saving an order.')
     if (!cart.length) return setError('Add at least one item to the cart.')
     if (discount.enabled) {
@@ -796,7 +834,8 @@ export default function CashierPage() {
   }
 
   return (
-    <div className={`cashier-v2 legacy-cashier ${isFullscreen ? 'cashier-is-fullscreen' : ''}`}>
+    <div className={`cashier-v2 legacy-cashier ${isFullscreen ? 'cashier-is-fullscreen' : ''} ${isPosClosed ? 'is-pos-closed' : ''}`}>
+      {isPosClosed ? <CashierClosedBanner onOpenEod={() => setShowEodModal(true)} /> : null}
       <header className="legacy-cashier-top">
         <div className="cashier-top-left">
           {storeInfo.logoUrl ? <img className="cashier-brand-mark cashier-brand-logo" src={storeInfo.logoUrl} alt=""/> : <span className="cashier-brand-mark" aria-hidden="true">{storeInitials}</span>}
@@ -827,6 +866,10 @@ export default function CashierPage() {
             {showTransactions ? <ShoppingBag size={21} /> : <ReceiptText size={21} />}
             <span>{showTransactions ? 'Back to POS' : 'Transactions'}</span>
           </button>
+          <button type="button" className={`cashier-workspace-nav-button ${showEodModal ? 'is-active' : ''}`} onClick={() => setShowEodModal(true)} aria-label="End of Day">
+            <FileSpreadsheet size={21} />
+            <span>End of Day</span>
+          </button>
           <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)} aria-label="Sign out"><LogOut size={21} aria-hidden="true" /><span>Sign out</span></button>
         </nav>
       </header>
@@ -839,6 +882,7 @@ export default function CashierPage() {
               selectedTransactionId={transactionDetails?.id}
               onViewDetails={openTransactionDetails}
               onOpenReceipt={(order) => setReceipt(order)}
+              onOpenEod={() => setShowEodModal(true)}
             />
           </section>
           <aside className="legacy-ticket cashier-transaction-detail-panel" aria-label="Transaction details">
@@ -874,12 +918,12 @@ export default function CashierPage() {
             </div>
             <div className="legacy-pos-heading">
               <div>
-                <div className="cashier-menu-title-row"><div className="cashier-menu-title"><h1>Menu</h1><button type="button" className="cashier-fullscreen" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}><Expand size={16} /> <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span></button></div><div className="cashier-menu-actions"><button type="button" className="cashier-new-order" onClick={openNewOrderTab} disabled={orderTabs.length >= MAX_OPEN_ORDER_TABS}><Plus size={18} /> New Order</button></div></div>
+                <div className="cashier-menu-title-row"><div className="cashier-menu-title"><h1>Menu</h1><button type="button" className="cashier-fullscreen" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}><Expand size={16} /> <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span></button></div><div className="cashier-menu-actions"><button type="button" className="cashier-new-order" onClick={openNewOrderTab} disabled={isPosClosed || orderTabs.length >= MAX_OPEN_ORDER_TABS} title={isPosClosed ? 'POS is currently closed (6:00 AM – 10:00 PM)' : undefined}><Plus size={18} /> New Order</button></div></div>
               </div>
             </div>
             {notice ? <div className="cashier-sync-note">{notice}</div> : null}
             <div className="cashier-menu-controls"><label><Search size={18} /><input inputMode="search" enterKeyHint="search" value={search} onChange={(event) => setSearch(event.target.value.slice(0, 100))} maxLength={100} placeholder="Search menu items" /></label><CategoryTabs categories={categories} active={category} onChange={setCategory} /></div>
-            {loading ? <div className="cashier-empty-state cashier-menu-loading" role="status" aria-live="polite"><ShoppingBag size={28} /><b>Loading latest menu</b><span>Syncing current items, prices, and images.</span></div> : <ProductGrid products={filteredProducts} onAdd={addToCart} />}
+            {loading ? <div className="cashier-empty-state cashier-menu-loading" role="status" aria-live="polite"><ShoppingBag size={28} /><b>Loading latest menu</b><span>Syncing current items, prices, and images.</span></div> : <ProductGrid products={filteredProducts} onAdd={addToCart} isClosed={isPosClosed} />}
             {!loading && filteredProducts.length === 0 ? <div className="cashier-empty-state"><Search size={28} /><b>No menu items found</b><span>Try another category or search term.</span></div> : null}
           </section>
 
@@ -887,16 +931,16 @@ export default function CashierPage() {
             <header>
               <div><span><small>Current order</small><b>{activeOrder.id}</b></span></div>
               <div className="cashier-cart-header-actions">
-                <button type="button" className="cashier-clear-cart" onClick={() => setCart([])}>Clear Cart</button>
+                <button type="button" className="cashier-clear-cart" onClick={() => setCart([])} disabled={isPosClosed}>Clear Cart</button>
                 <button type="button" className="cashier-close-drawer" onClick={() => setMobileCartOpen(false)} aria-label="Close cart">&times;</button>
               </div>
             </header>
             <div className="cashier-cart-count"><span>Items</span><b>{cartCount}</b></div>
-            <POSCart cart={cart} onQty={changeQty} onEdit={editCartItem} />
+            <POSCart cart={cart} onQty={changeQty} onEdit={editCartItem} disabled={isPosClosed} />
             <div className="cashier-checkout-block">
               <OrderSummary subtotal={subtotal} total={total} breakdown={priceBreakdown} />
               {error ? <div className="cashier-error">{error}</div> : null}
-              <button type="button" className="legacy-charge" onClick={() => { setMobileCartOpen(false); setShowCheckout(true) }} disabled={!cart.length}>Checkout</button>
+              <button type="button" className="legacy-charge" onClick={() => { setMobileCartOpen(false); setShowCheckout(true) }} disabled={isPosClosed || !cart.length} title={isPosClosed ? 'POS is currently closed (6:00 AM – 10:00 PM)' : undefined}>Checkout</button>
             </div>
           </aside>
           {mobileCartOpen ? <div className="cashier-cart-backdrop" onClick={() => setMobileCartOpen(false)} /> : null}
@@ -911,6 +955,19 @@ export default function CashierPage() {
       {showCheckout ? <CheckoutModal cart={cart} total={total} discount={discount} breakdown={priceBreakdown} setDiscount={setDiscount} payment={payment} setPayment={setPayment} change={change} error={error} saving={savingOrder} onCancel={() => { if (!savingOrder) { setShowCheckout(false); setError('') } }} onConfirm={async () => { if (await saveOrder()) setShowCheckout(false) }} /> : null}
       {customizingProduct ? <ItemCustomizationModal product={customizingProduct} onClose={() => setCustomizingProduct(null)} onAdd={(customizations, addons, quantity) => { updateConfiguredItem(customizingProduct, customizations, addons, quantity); setCustomizingProduct(null) }} /> : null}
       {receipt ? <CashierReceipt order={receipt} onClose={() => setReceipt(null)} /> : null}
+
+      <CashierClosedModal
+        open={showClosedModal}
+        onClose={() => setShowClosedModal(false)}
+        onOpenEod={() => setShowEodModal(true)}
+      />
+      <CashierEodModal
+        open={showEodModal}
+        onClose={() => setShowEodModal(false)}
+        cashierProfile={cashierProfile}
+        initialDateKey={getBusinessDateKey(clock)}
+        storeInfo={storeInfo}
+      />
     </div>
   )
 }
@@ -919,10 +976,18 @@ function CategoryTabs({ categories, active, onChange }) {
   return <div className="legacy-pos-tabs">{categories.map((item) => <button type="button" className={item === active ? 'active' : ''} key={item} onClick={() => onChange(item)}>{item}</button>)}</div>
 }
 
-function ProductGrid({ products, onAdd }) {
+function ProductGrid({ products, onAdd, isClosed = false }) {
   return <div className="legacy-pos-products">{products.map((item) => {
     const hasOptions = Boolean(item.allowSugar || item.allowIce || item.allowAddons || item.temperatureType || item.variantOptions?.length)
-    return <article key={item.id} className={!item.price || !item.isAvailable ? 'unpriced' : 'cashier-product-card'} role={!item.price || !item.isAvailable ? undefined : 'button'} tabIndex={!item.price || !item.isAvailable ? undefined : 0} onClick={() => { if (item.price && item.isAvailable) onAdd(item) }} onKeyDown={(event) => { if (item.price && item.isAvailable && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onAdd(item) } }}>
+    const isActionDisabled = isClosed || !item.price || !item.isAvailable
+    return <article
+      key={item.id}
+      className={isActionDisabled ? 'unpriced cashier-product-card is-disabled' : 'cashier-product-card'}
+      role={isActionDisabled ? undefined : 'button'}
+      tabIndex={isActionDisabled ? undefined : 0}
+      onClick={() => { if (!isActionDisabled) onAdd(item) }}
+      onKeyDown={(event) => { if (!isActionDisabled && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onAdd(item) } }}
+    >
       <img src={item.image} alt={item.name} />
       <div className="cashier-product-body">
         <small>{item.category}{hasOptions ? ' / Customizable' : ''}</small>
@@ -930,7 +995,7 @@ function ProductGrid({ products, onAdd }) {
         <StockPreview stock={item.stock} />
         <footer>
           <strong>{item.price ? peso(item.price) : 'No price set'}</strong>
-          <button type="button" disabled={!item.price || !item.isAvailable} onClick={(event) => { event.stopPropagation(); onAdd(item) }} aria-label={`Add ${item.name}`}><Plus size={18} /></button>
+          <button type="button" disabled={isActionDisabled} onClick={(event) => { event.stopPropagation(); if (!isActionDisabled) onAdd(item) }} aria-label={`Add ${item.name}`}><Plus size={18} /></button>
         </footer>
       </div>
     </article>
@@ -951,7 +1016,7 @@ function StockPreview({ stock }) {
   return <p className={`cashier-product-stock ${tone}`}>{formattedQuantity} {unit} available</p>
 }
 
-function POSCart({ cart, onQty, onEdit }) {
+function POSCart({ cart, onQty, onEdit, disabled = false }) {
   return <div className="legacy-ticket-items">{cart.length === 0 ? <div className="cashier-empty-cart"><p>No items added yet.</p></div> : cart.map((item) => {
     const editable = Boolean(item.allowSugar || item.allowIce || item.allowAddons || item.temperatureType || item.variantOptions?.length)
     return <article key={item.lineKey}>
@@ -965,14 +1030,14 @@ function POSCart({ cart, onQty, onEdit }) {
           </div>
           <div className="cashier-line-price-actions">
             <strong>{peso(itemLineTotal(item))}</strong>
-            {editable ? <button type="button" className="cashier-edit-line" onClick={() => onEdit(item)}><Pencil size={14} /> Edit</button> : null}
+            {editable ? <button type="button" className="cashier-edit-line" onClick={() => !disabled && onEdit(item)} disabled={disabled}><Pencil size={14} /> Edit</button> : null}
           </div>
         </div>
         <div className="cashier-line-bottom">
           <span className="cashier-qty-stepper">
-            <button type="button" onClick={() => onQty(item.lineKey, -1)} aria-label={`Decrease ${item.name} quantity`}><Minus size={14} /></button>
+            <button type="button" onClick={() => onQty(item.lineKey, -1)} disabled={disabled} aria-label={`Decrease ${item.name} quantity`}><Minus size={14} /></button>
             <strong className="cashier-qty-value" aria-label={`Quantity ${item.qty}`}>{item.qty}</strong>
-            <button type="button" onClick={() => onQty(item.lineKey, 1)} aria-label={`Increase ${item.name} quantity`}><Plus size={14} /></button>
+            <button type="button" onClick={() => onQty(item.lineKey, 1)} disabled={disabled} aria-label={`Increase ${item.name} quantity`}><Plus size={14} /></button>
           </span>
         </div>
       </div>
@@ -1191,7 +1256,7 @@ function CheckoutModal({ cart, total, discount, breakdown, setDiscount, payment,
     </section>
   </div>
 }
-function CashierTransactionsView({ transactions, selectedTransactionId, onViewDetails, onOpenReceipt }) {
+function CashierTransactionsView({ transactions, selectedTransactionId, onViewDetails, onOpenReceipt, onOpenEod }) {
   const [query, setQuery] = useState('')
   const [paymentFilter, setPaymentFilter] = useState('All')
   const [periodFilter, setPeriodFilter] = useState('All time')
@@ -1225,6 +1290,12 @@ function CashierTransactionsView({ transactions, selectedTransactionId, onViewDe
   return <div className="cashier-transactions-view" aria-labelledby="transactions-title">
       <header>
         <div><span>Cashier records</span><h1 id="transactions-title">Transaction History</h1><p>Review recent walk-in orders and open a record for more detail.</p></div>
+        {onOpenEod ? (
+          <button type="button" className="cashier-transactions-eod-action" onClick={onOpenEod}>
+            <FileSpreadsheet size={16} aria-hidden="true" />
+            <span>End of Day Summary</span>
+          </button>
+        ) : null}
       </header>
       <div className="transaction-toolbar">
         <label className="transaction-search"><Search size={18} /><input aria-label="Search order, customer, or payment" value={query} onChange={(event) => setQuery(event.target.value.slice(0, 100))} maxLength={100} placeholder="Search order, customer, or payment" /></label>
