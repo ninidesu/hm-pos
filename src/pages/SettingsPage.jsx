@@ -9,6 +9,7 @@ import { SYSTEM_DEFAULTS, fetchPortalConfiguration, saveStoreConfiguration } fro
 import { EMAIL_MAX_LENGTH, isValidEmail, isValidPhone, sanitizeCatalogText, sanitizePhone, sanitizeUsername } from '../utils/inputValidation'
 import { IMAGE_UPLOAD_ACCEPT, validateImageFile } from '../utils/imageUpload'
 import { publishStoreInfo } from '../hooks/useStoreInfo'
+import { normalizeOperatingHours } from '../utils/operatingHours'
 
 export default function SettingsPage() {
   return <AppShell role="admin" title="Settings">
@@ -70,6 +71,8 @@ function SettingsHome() {
     if (!store.name.trim()) return setStoreNotice({ tone: 'error', message: 'Store name is required.' })
     if (store.email && !isValidEmail(store.email)) return setStoreNotice({ tone: 'error', message: 'Enter a valid store email address.' })
     if (store.phone && !isValidPhone(store.phone)) return setStoreNotice({ tone: 'error', message: 'Phone number must contain 11 digits and start with 09.' })
+    const configuredHours = normalizeOperatingHours(store)
+    if (configuredHours.openTime !== store.openTime || configuredHours.closeTime !== store.closeTime) return setStoreNotice({ tone: 'error', message: 'Choose valid store hours with closing time after opening time.' })
     setSavingStore(true)
     try {
       const result = await saveStoreConfiguration(store, logoFile)
@@ -104,7 +107,7 @@ function SettingsHome() {
 
     <section className="simple-settings" aria-labelledby="store-info-title">
       <header className="simple-settings-header">
-        <div><h2 id="store-info-title">Store info</h2><p>These details are used across the system and on receipts.</p></div>
+        <div><h2 id="store-info-title">Store info</h2><p>These details are used across the system, receipts, and cashier availability.</p></div>
       </header>
       <form className="simple-account-form" onSubmit={saveStore}>
         <div className="simple-store-grid">
@@ -114,6 +117,9 @@ function SettingsHome() {
           <label className="simple-logo-upload"><span>Upload</span><span className="simple-logo-upload-control">{logoFile ? logoFile.name : 'Choose image'}<input type="file" accept={IMAGE_UPLOAD_ACCEPT} onChange={chooseLogo}/></span><button type="button" className="simple-logo-remove" onClick={removeLogo} disabled={savingStore || (!logoFile && !store.logoUrl)}>Remove image</button><small>JPG, PNG, or WebP only, up to 10 MB.</small></label>
           <label className="ua-field"><span>Email</span><input type="email" placeholder="Leave blank" maxLength={EMAIL_MAX_LENGTH} value={store.email} onChange={(event) => updateStore({ email: event.target.value.slice(0, EMAIL_MAX_LENGTH) })}/></label>
           <label className="ua-field"><span>Contact number</span><input type="tel" inputMode="numeric" placeholder="Leave blank" maxLength={11} value={store.phone} onChange={(event) => updateStore({ phone: sanitizePhone(event.target.value) })}/></label>
+          <div className="simple-store-hours-copy"><b>Store open hours</b><span>The cashier POS accepts orders only during this daily time window.</span></div>
+          <label className="ua-field"><span>Opening time</span><input type="time" required value={store.openTime || '06:00'} onChange={(event) => updateStore({ openTime: event.target.value })}/></label>
+          <label className="ua-field"><span>Closing time</span><input type="time" required value={store.closeTime || '22:00'} onChange={(event) => updateStore({ closeTime: event.target.value })}/></label>
         </div>
         {storeNotice && <p className={`simple-account-notice is-${storeNotice.tone}`} role={storeNotice.tone === 'error' ? 'alert' : 'status'}>{storeNotice.message}</p>}
         <footer className="simple-account-actions"><button type="submit" className="ua-primary-action" disabled={savingStore}>{savingStore ? 'Saving…' : 'Save changes'}</button></footer>

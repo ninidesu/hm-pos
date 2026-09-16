@@ -1,8 +1,8 @@
 export const DEFAULT_PRICING = Object.freeze({
-  vatRate: 0,
-  pricesIncludeVat: false,
+  vatRate: 0.12,
+  pricesIncludeVat: true,
   currency: 'PHP',
-  version: 2,
+  version: 3,
 })
 
 export function roundMoney(value) {
@@ -11,12 +11,16 @@ export function roundMoney(value) {
 
 export function normalizePricing(value = {}) {
   const parsedVersion = Number(value?.version)
+  const parsedVatRate = Number(value?.vatRate)
+  const vatRate = Number.isFinite(parsedVatRate) && parsedVatRate > 0 && parsedVatRate <= 1
+    ? parsedVatRate
+    : DEFAULT_PRICING.vatRate
 
   return {
     ...DEFAULT_PRICING,
     ...value,
-    vatRate: 0,
-    pricesIncludeVat: false,
+    vatRate,
+    pricesIncludeVat: true,
     currency: typeof value?.currency === 'string' && value.currency.trim()
       ? value.currency.trim().toUpperCase()
       : DEFAULT_PRICING.currency,
@@ -29,16 +33,25 @@ export function formatVatRate(rate) {
 }
 
 export function vatIncludedAmount(baseAmount, vatRate = DEFAULT_PRICING.vatRate) {
-  return roundMoney(baseAmount)
+  const rate = Number(vatRate || 0)
+  return roundMoney(Number(baseAmount || 0) * (1 + Math.max(0, rate)))
 }
 
 export function vatPortionOfInclusiveAmount(inclusiveAmount, vatRate = DEFAULT_PRICING.vatRate) {
-  return 0
+  const totalAmount = roundMoney(inclusiveAmount)
+  const rate = Number(vatRate || 0)
+  if (!Number.isFinite(rate) || rate <= 0) return 0
+  return roundMoney(totalAmount - (totalAmount / (1 + rate)))
 }
 
 export function vatBreakdownFromInclusiveAmount(inclusiveAmount, vatRate = DEFAULT_PRICING.vatRate, pricesIncludeVat = true) {
   const totalAmount = roundMoney(inclusiveAmount)
-  return { baseAmount: totalAmount, vatAmount: 0, totalAmount }
+  const rate = Number(vatRate || 0)
+  if (!pricesIncludeVat || !Number.isFinite(rate) || rate <= 0) {
+    return { baseAmount: totalAmount, vatAmount: 0, totalAmount, vatRate: 0, pricesIncludeVat: false }
+  }
+  const vatAmount = vatPortionOfInclusiveAmount(totalAmount, rate)
+  return { baseAmount: roundMoney(totalAmount - vatAmount), vatAmount, totalAmount, vatRate: rate, pricesIncludeVat: true }
 }
 
 export function isVatExemptDiscountType(discountType) {
@@ -74,6 +87,8 @@ export function vatExemptDiscountBreakdown(
     discountAmount,
     benefitAmount: roundMoney(vatAmount + discountAmount),
     totalAmount: roundMoney(vatExemptSale - discountAmount),
+    vatRate: standardBreakdown.vatRate,
+    pricesIncludeVat: standardBreakdown.pricesIncludeVat,
   }
 }
 
@@ -139,5 +154,7 @@ export function buildVatExemptOrderBreakdown({
     totalBenefitAmount: roundMoney(exemptVatAmount + actualDiscountAmount),
     discountSubtotal: eligibleGrossAmount,
     discountLabel: vatExemptDiscountLabel(discountType),
+    vatRate: regularBreakdown.vatRate,
+    pricesIncludeVat: regularBreakdown.pricesIncludeVat,
   }
 }

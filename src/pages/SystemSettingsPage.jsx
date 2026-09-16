@@ -4,6 +4,7 @@ import AppShell from '../components/AppShell'
 import { describeError } from '../utils/describeError'
 import { EMAIL_MAX_LENGTH, isValidEmail, isValidPhone, sanitizeCatalogText, sanitizeDecimal, sanitizeDigits, sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
 import { IMAGE_UPLOAD_ACCEPT, validateImageFile } from '../utils/imageUpload'
+import { normalizeOperatingHours } from '../utils/operatingHours'
 import {
   SYSTEM_DEFAULTS, fetchPortalConfiguration, savePaymentConfiguration, savePortalConfiguration,
 } from '../services/adminPortalConfigurationService'
@@ -45,6 +46,10 @@ export default function SystemSettingsPage() {
   const save = async (key) => {
     if (key === 'store' && settings.store.email && !isValidEmail(settings.store.email)) { setError('Enter a valid business email address.'); return }
     if (key === 'store' && settings.store.phone && !isValidPhone(settings.store.phone)) { setError('Contact number must contain 11 digits and start with 09.'); return }
+    if (key === 'store') {
+      const configuredHours = normalizeOperatingHours(settings.store)
+      if (configuredHours.openTime !== settings.store.openTime || configuredHours.closeTime !== settings.store.closeTime) { setError('Choose valid store hours with closing time after opening time.'); return }
+    }
     if (key === 'ordering' && !settings.ordering.deliveryEnabled && !settings.ordering.pickupEnabled) { setError('Keep at least one fulfillment method enabled.'); return }
     if (key === 'payments' && !(settings.payments.enabledMethods || []).length) { setError('Keep at least one payment method enabled.'); return }
     setSaving(true); setError('')
@@ -75,12 +80,14 @@ export default function SystemSettingsPage() {
         <nav className="ac-section-nav" aria-label="System setting areas">{SECTIONS.map(([id, label, Icon, description]) => <button type="button" key={id} className={section === id ? 'is-active' : ''} onClick={() => setSection(id)} aria-current={section === id ? 'page' : undefined}><Icon size={18}/><span><b>{label}</b><small>{description}</small></span></button>)}</nav>
         <main className="ac-panel">
           {loading ? <div className="ac-skeleton"><i/><i/><i/><i/></div> : <>
-            {section === 'store' && <SettingsSection title="Store profile" description="These details appear on customer-facing contact and footer surfaces." onSave={() => save('store')} saving={saving}>
+            {section === 'store' && <SettingsSection title="Store profile" description="These details appear on customer-facing surfaces and control when the cashier POS accepts orders." onSave={() => save('store')} saving={saving}>
               <div className="ac-form-grid">
                 <Field label="Store name"><input value={settings.store.name} maxLength={80} onChange={(event) => update('store', { name: sanitizeCatalogText(event.target.value, 80) })}/></Field>
                 <Field label="Business email"><input type="email" maxLength={EMAIL_MAX_LENGTH} value={settings.store.email} onChange={(event) => update('store', { email: event.target.value.slice(0, EMAIL_MAX_LENGTH) })}/></Field>
                 <Field label="Contact number"><input type="tel" inputMode="numeric" autoComplete="tel" maxLength={11} pattern="09[0-9]{9}" title="Enter 11 digits starting with 09." placeholder="09XXXXXXXXX" value={settings.store.phone} onChange={(event) => update('store', { phone: sanitizePhone(event.target.value) })}/></Field>
                 <Field label="Timezone" hint="Schedules and timestamps use this timezone."><select value={settings.store.timezone} onChange={(event) => update('store', { timezone: event.target.value })}><option value="Asia/Manila">Asia/Manila (PHT)</option></select></Field>
+                <Field label="Opening time" hint="Cashier orders start at this time."><input type="time" required value={settings.store.openTime || '06:00'} onChange={(event) => update('store', { openTime: event.target.value })}/></Field>
+                <Field label="Closing time" hint="Cashier orders stop at this time."><input type="time" required value={settings.store.closeTime || '22:00'} onChange={(event) => update('store', { closeTime: event.target.value })}/></Field>
                 <Field label="Store address" wide><textarea rows="3" maxLength={200} value={settings.store.address} onChange={(event) => update('store', { address: event.target.value })}/></Field>
               </div>
             </SettingsSection>}

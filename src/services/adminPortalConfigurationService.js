@@ -29,7 +29,7 @@ export const CONTENT_DEFAULTS = {
 export const SYSTEM_DEFAULTS = {
   store: {
     name: 'HM POS', email: '', phone: '',
-    address: '', logoUrl: '', timezone: 'Asia/Manila',
+    address: '', logoUrl: '', timezone: 'Asia/Manila', openTime: '06:00', closeTime: '22:00',
   },
   ordering: {
     storeStatus: 'open', closureMessage: 'Online ordering is temporarily unavailable. Please check again later.',

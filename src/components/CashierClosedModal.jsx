@@ -1,6 +1,6 @@
 ﻿import { Clock } from 'lucide-react'
 
-export default function CashierClosedModal({ open, onClose, onOpenEod }) {
+export default function CashierClosedModal({ open, onClose, onOpenEod, operatingStatus }) {
   if (!open) return null
 
   return (
@@ -13,7 +13,7 @@ export default function CashierClosedModal({ open, onClose, onOpenEod }) {
           POS is currently closed.
         </h2>
         <p className="cashier-closed-modal-subtitle">
-          Operating hours are 6:00 AM – 10:00 PM.
+          Operating hours are {operatingStatus?.rangeLabel || '6:00 AM – 10:00 PM'}.
         </p>
         <div className="cashier-closed-modal-actions">
           <button

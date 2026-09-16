@@ -756,7 +756,7 @@ function OrderDrawer({ order, addonNames, onClose, onMain, onCancel, busy }) {
   const stage = stageOf(order)
   const main = mainActionFor(order)
   const canCancel = stage !== 'completed' && stage !== 'cancelled' && !cancellationRequested(order)
-  const breakdown = buildVatExemptOrderBreakdown({ subtotal: order.subtotal, discountSubtotal: order.discount_subtotal, discountType: order.discount_type, discountAmount: order.discount_amount, vatExemptAmount: order.vat_exempt_amount, vatRate: 0, pricesIncludeVat: false })
+  const breakdown = buildVatExemptOrderBreakdown({ subtotal: order.subtotal, discountSubtotal: order.discount_subtotal, discountType: order.discount_type, discountAmount: order.discount_amount, vatExemptAmount: order.vat_exempt_amount, vatRate: order.vat_rate == null ? 0.12 : order.vat_rate, pricesIncludeVat: order.prices_include_vat == null ? true : order.prices_include_vat })
 
   useEffect(() => {
     setProofUrl(''); setProofError('')

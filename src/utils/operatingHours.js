@@ -1,29 +1,60 @@
-﻿export const OPERATING_HOURS = {
+export const DEFAULT_OPERATING_HOURS = Object.freeze({
+  openTime: '06:00',
+  closeTime: '22:00',
+})
+
+const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+
+function minutesFromTime(value) {
+  const [hour, minute] = value.split(':').map(Number)
+  return (hour * 60) + minute
+}
+
+export function normalizeOperatingHours(value = {}) {
+  const openTime = TIME_PATTERN.test(String(value?.openTime || '')) ? String(value.openTime) : DEFAULT_OPERATING_HOURS.openTime
+  const closeTime = TIME_PATTERN.test(String(value?.closeTime || '')) ? String(value.closeTime) : DEFAULT_OPERATING_HOURS.closeTime
+
+  if (minutesFromTime(closeTime) <= minutesFromTime(openTime)) return { ...DEFAULT_OPERATING_HOURS }
+  return { openTime, closeTime }
+}
+
+export function formatOperatingTime(value) {
+  const normalized = TIME_PATTERN.test(String(value || '')) ? String(value) : DEFAULT_OPERATING_HOURS.openTime
+  const [hour, minute] = normalized.split(':').map(Number)
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const displayHour = hour % 12 || 12
+  return `${displayHour}:${String(minute).padStart(2, '0')} ${suffix}`
+}
+
+const defaultOpenLabel = formatOperatingTime(DEFAULT_OPERATING_HOURS.openTime)
+const defaultCloseLabel = formatOperatingTime(DEFAULT_OPERATING_HOURS.closeTime)
+
+export const OPERATING_HOURS = Object.freeze({
   OPEN_HOUR: 6,
   OPEN_MINUTE: 0,
   CLOSE_HOUR: 22,
   CLOSE_MINUTE: 0,
-  OPEN_LABEL: '6:00 AM',
-  CLOSE_LABEL: '10:00 PM',
-  RANGE_LABEL: '6:00 AM – 10:00 PM',
-  CLOSED_RANGE_LABEL: '10:00 PM – 6:00 AM',
-  CLOSED_MESSAGE: 'POS is currently closed. Operating hours are 6:00 AM – 10:00 PM.',
-}
+  OPEN_LABEL: defaultOpenLabel,
+  CLOSE_LABEL: defaultCloseLabel,
+  RANGE_LABEL: `${defaultOpenLabel} – ${defaultCloseLabel}`,
+  CLOSED_RANGE_LABEL: `${defaultCloseLabel} – ${defaultOpenLabel}`,
+  CLOSED_MESSAGE: `POS is currently closed. Operating hours are ${defaultOpenLabel} – ${defaultCloseLabel}.`,
+})
 
 /**
- * Checks whether the POS is within active operating hours (6:00 AM to before 10:00 PM).
+ * Checks whether the POS is within the configured active operating hours.
  * Evaluates based on the provided date (local system time).
  */
-export function getOperatingHoursStatus(date = new Date()) {
+export function getOperatingHoursStatus(date = new Date(), configuredHours = {}) {
   const current = date instanceof Date ? date : new Date(date)
+  const hours = normalizeOperatingHours(configuredHours)
   const hour = current.getHours()
   const minute = current.getMinutes()
   const second = current.getSeconds()
 
   const currentSeconds = (hour * 3600) + (minute * 60) + second
-  const openSeconds = (OPERATING_HOURS.OPEN_HOUR * 3600) + (OPERATING_HOURS.OPEN_MINUTE * 60)
-  const closeSeconds = (OPERATING_HOURS.CLOSE_HOUR * 3600) + (OPERATING_HOURS.CLOSE_MINUTE * 60)
-
+  const openSeconds = minutesFromTime(hours.openTime) * 60
+  const closeSeconds = minutesFromTime(hours.closeTime) * 60
   const isOpen = currentSeconds >= openSeconds && currentSeconds < closeSeconds
 
   let secondsUntilChange = 0
@@ -32,35 +63,38 @@ export function getOperatingHoursStatus(date = new Date()) {
   } else if (currentSeconds < openSeconds) {
     secondsUntilChange = openSeconds - currentSeconds
   } else {
-    // After 10:00 PM, until next day 6:00 AM
     secondsUntilChange = (86400 - currentSeconds) + openSeconds
   }
 
+  const openLabel = formatOperatingTime(hours.openTime)
+  const closeLabel = formatOperatingTime(hours.closeTime)
   return {
     isOpen,
     isClosed: !isOpen,
     hour,
     minute,
     second,
-    openLabel: OPERATING_HOURS.OPEN_LABEL,
-    closeLabel: OPERATING_HOURS.CLOSE_LABEL,
-    rangeLabel: OPERATING_HOURS.RANGE_LABEL,
-    closedRangeLabel: OPERATING_HOURS.CLOSED_RANGE_LABEL,
-    closedMessage: OPERATING_HOURS.CLOSED_MESSAGE,
+    openTime: hours.openTime,
+    closeTime: hours.closeTime,
+    openLabel,
+    closeLabel,
+    rangeLabel: `${openLabel} – ${closeLabel}`,
+    closedRangeLabel: `${closeLabel} – ${openLabel}`,
+    closedMessage: `POS is currently closed. Operating hours are ${openLabel} – ${closeLabel}.`,
     secondsUntilChange,
   }
 }
 
 /**
  * Returns the business date string (YYYY-MM-DD) for a given timestamp.
- * If the current time is before 6:00 AM, it is considered part of the previous day's shift
- * for auditing/EOD reporting purposes.
+ * If the current time is before the configured opening time, it is considered
+ * part of the previous day's shift for auditing/EOD reporting purposes.
  */
-export function getBusinessDateKey(date = new Date()) {
+export function getBusinessDateKey(date = new Date(), configuredHours = {}) {
   const current = date instanceof Date ? new Date(date) : new Date(date)
-  if (current.getHours() < OPERATING_HOURS.OPEN_HOUR) {
-    current.setDate(current.getDate() - 1)
-  }
+  const hours = normalizeOperatingHours(configuredHours)
+  const currentTime = `${String(current.getHours()).padStart(2, '0')}:${String(current.getMinutes()).padStart(2, '0')}`
+  if (minutesFromTime(currentTime) < minutesFromTime(hours.openTime)) current.setDate(current.getDate() - 1)
   const year = current.getFullYear()
   const month = String(current.getMonth() + 1).padStart(2, '0')
   const day = String(current.getDate()).padStart(2, '0')

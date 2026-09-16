@@ -1251,6 +1251,9 @@ html[data-theme='dark'] .cashier-v2 .receipt-preview-shell {
 .receipt-logo-image { object-fit: contain; }
 .simple-store-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 18px; padding: 20px 22px; }
 .simple-store-grid :is(.ua-field, .simple-logo-upload, .simple-store-preview-field) { min-width: 0; }
+.simple-store-hours-copy { grid-column: 1 / -1; display: grid; gap: 4px; margin-top: 2px; padding-top: 16px; border-top: 1px solid var(--mgmt-border); }
+.simple-store-hours-copy b { color: var(--mgmt-heading); font-size: .78rem; }
+.simple-store-hours-copy span { color: var(--mgmt-muted); font-size: .7rem; line-height: 1.45; }
 .simple-store-preview-field,
 .simple-logo-upload { display: grid; gap: 7px; color: var(--mgmt-text); font-size: .73rem; font-weight: 800; }
 .simple-store-logo-preview { width: 88px; height: 88px; border-style: solid; border-radius: 50%; }
@@ -2869,6 +2872,168 @@ html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-butt
   }
 }
 
+/* Cashier opening register confirmation */
+.cashier-v2 .cashier-opening-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(45, 10, 78, .62);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+.cashier-v2 .cashier-opening-modal {
+  width: min(480px, calc(100vw - 24px));
+  padding: 30px;
+  border: 1px solid #ddcde6;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 28px 80px rgba(45, 10, 78, .28);
+  color: #2d0a4e;
+}
+
+.cashier-v2 .cashier-opening-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+  border-radius: 16px;
+  background: #f0e8f6;
+  color: #542475;
+}
+
+.cashier-v2 .cashier-opening-kicker {
+  display: block;
+  color: #796985;
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.cashier-v2 .cashier-opening-modal h2 {
+  margin: 6px 0 10px;
+  color: #542475;
+  font-size: 1.55rem;
+  letter-spacing: -.03em;
+}
+
+.cashier-v2 .cashier-opening-intro {
+  margin: 0;
+  color: #665875;
+  font-size: .88rem;
+  line-height: 1.55;
+}
+
+.cashier-v2 .cashier-opening-hours {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 20px 0 18px;
+  padding: 12px 14px;
+  border: 1px solid #eadfee;
+  border-radius: 12px;
+  background: #faf7fc;
+  color: #796985;
+  font-size: .78rem;
+}
+
+.cashier-v2 .cashier-opening-hours strong { color: #542475; }
+
+.cashier-v2 .cashier-opening-field {
+  display: grid;
+  gap: 8px;
+  color: #2d0a4e;
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.cashier-v2 .cashier-opening-input-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  border: 1px solid #cdb6d8;
+  border-radius: 12px;
+  background: #fff;
+  color: #542475;
+  overflow: hidden;
+}
+
+.cashier-v2 .cashier-opening-input-wrap > span {
+  padding-left: 14px;
+  font-weight: 800;
+}
+
+.cashier-v2 .cashier-opening-input-wrap input {
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  padding: 0 14px 0 8px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #2d0a4e;
+  font: inherit;
+  font-size: 1.15rem;
+}
+
+.cashier-v2 .cashier-opening-input-wrap:focus-within {
+  border-color: #542475;
+  box-shadow: 0 0 0 3px rgba(84, 36, 117, .16);
+}
+
+.cashier-v2 .cashier-opening-error {
+  margin: 8px 0 0;
+  color: #a33131;
+  font-size: .75rem;
+  font-weight: 750;
+}
+
+.cashier-v2 .cashier-opening-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 20px;
+  color: #796985;
+  font-size: .72rem;
+}
+
+.cashier-v2 .cashier-opening-confirm {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #542475;
+  border-radius: 11px;
+  background: #542475;
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.cashier-v2 .cashier-opening-confirm:hover:not(:disabled) { background: #3f145f; }
+.cashier-v2 .cashier-opening-confirm:disabled { opacity: .58; cursor: wait; }
+
+@media (max-width: 520px) {
+  .cashier-v2 .cashier-opening-modal {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+
+  .cashier-v2 .cashier-opening-modal h2 { font-size: 1.3rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cashier-v2 .cashier-opening-backdrop,
+  .cashier-v2 .cashier-opening-modal {
+    transition: none;
+    animation: none;
+  }
+}
+
 /* Mobile/tablet redesign: add breathing room and reduce decision density. */
 @media (min-width: 681px) and (max-width: 899px) {
   html[data-theme] .cashier-v2 .cashier-menu-controls {
@@ -3110,5 +3275,43 @@ html[data-theme] .cashier-v2 .legacy-cashier-top nav .cashier-workspace-nav-butt
 
   html[data-theme] .cashier-v2 :is(.customize-choice-button, .customize-addon-button) {
     min-height: 50px !important;
+  }
+}
+
+/* Cashier header actions: content-fit, centered, single-line labels on desktop. */
+@media (min-width: 900px) {
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav {
+    align-items: center;
+    gap: 8px;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav :is(.cashier-workspace-nav-button, .cashier-signout-button) {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto !important;
+    width: max-content !important;
+    min-width: max-content !important;
+    max-width: none !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 0 16px !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    text-align: center;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+  }
+
+  html[data-theme] .cashier-v2 .legacy-cashier-top nav :is(.cashier-workspace-nav-button, .cashier-signout-button) > span {
+    display: inline-block !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    clip: auto !important;
+    white-space: nowrap !important;
   }
 }

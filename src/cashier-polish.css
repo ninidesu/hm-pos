@@ -9006,71 +9006,58 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
   cursor: not-allowed !important;
 }
 
-/* End of Day (EOD) Modal & Dashboard */
+/* End of Day (EOD) thermal receipt */
 .cashier-eod-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
+  z-index: 99998;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99998;
   padding: 16px;
-  animation: cashierFadeIn 0.2s ease;
+  background: rgba(15, 23, 42, .62);
+  backdrop-filter: blur(4px);
 }
 
-.cashier-eod-modal {
-  max-width: 760px;
-  width: 100%;
-  max-height: 90vh;
-  background: #ffffff;
-  border-radius: 20px;
+.cashier-eod-modal.cashier-eod-receipt-modal {
+  width: min(760px, 100%);
+  max-height: min(94vh, 980px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
-  animation: cashierPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, .25);
+  color: #1f2937;
 }
 
-.cashier-eod-header {
-  padding: 20px 24px;
-  border-bottom: 1px solid #f1f5f9;
+.cashier-eod-screen-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  background: #faf8fc;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
 }
 
-.cashier-eod-header-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #542475;
-  background: #f3e8ff;
-  border: 1px solid #e9d5ff;
-  padding: 3px 10px;
-  border-radius: 20px;
-  margin-bottom: 6px;
+.cashier-eod-screen-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .12em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .cashier-eod-title {
+  margin: 0;
+  color: #1f2937;
   font-size: 20px;
   font-weight: 800;
-  color: #1e1b4b;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-.cashier-eod-subtitle {
-  font-size: 13px;
-  color: #64748b;
-  margin: 2px 0 0;
+  letter-spacing: -.02em;
 }
 
 .cashier-eod-header-actions {
@@ -9079,395 +9066,1013 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
   gap: 8px;
 }
 
-.cashier-eod-print-btn {
+.cashier-eod-print-btn,
+.cashier-eod-refresh-btn,
+.cashier-eod-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: #f8fafc;
+  justify-content: center;
+  min-height: 40px;
   border: 1px solid #cbd5e1;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 7px 14px;
   border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 800;
 }
 
-.cashier-eod-print-btn:hover {
-  background: #f1f5f9;
-  border-color: #94a3b8;
+.cashier-eod-print-btn,
+.cashier-eod-refresh-btn {
+  gap: 6px;
+  padding: 0 12px;
+}
+
+.cashier-eod-print-btn:disabled,
+.cashier-eod-refresh-btn:disabled {
+  cursor: not-allowed;
+  opacity: .55;
 }
 
 .cashier-eod-close-btn {
-  background: transparent;
-  border: none;
-  color: #64748b;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 0;
   border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  background: transparent;
+  color: #64748b;
 }
 
-.cashier-eod-close-btn:hover {
-  background: #f1f5f9;
-  color: #0f172a;
+.cashier-eod-close-btn:hover,
+.cashier-eod-print-btn:hover:not(:disabled),
+.cashier-eod-refresh-btn:hover:not(:disabled) {
+  border-color: #94a3b8;
+  background: #f8fafc;
 }
 
-/* Toolbar & Filters */
 .cashier-eod-toolbar {
-  padding: 12px 24px;
-  background: #ffffff;
-  border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.cashier-eod-date-picker {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5e7eb;
   background: #f8fafc;
-  border: 1px solid #e2e8f0;
+}
+
+.cashier-eod-date-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 6px 10px;
-  color: #475569;
+  background: #fff;
+  color: #64748b;
 }
 
 .cashier-eod-input {
-  border: none;
+  min-width: 132px;
+  border: 0;
+  outline: 0;
   background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  outline: none;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .cashier-eod-cashier-filter {
   display: flex;
-  align-items: center;
   gap: 6px;
   margin-left: auto;
 }
 
 .cashier-eod-pill {
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #64748b;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 20px;
+  min-height: 36px;
+  padding: 0 10px;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 .cashier-eod-pill.active {
-  background: #542475;
-  color: #ffffff;
-  border-color: #542475;
+  border-color: #203f30;
+  background: #203f30;
+  color: #fff;
 }
 
-.cashier-eod-refresh-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.cashier-eod-refresh-btn:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-}
-
-.cashier-eod-refresh-btn .spinning {
-  animation: cashierSpin 0.75s linear infinite;
-}
-
-@keyframes cashierSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-/* Modal Body */
 .cashier-eod-body {
-  padding: 20px 24px;
+  min-height: 0;
   overflow-y: auto;
-  flex: 1;
+  padding: 16px 20px 20px;
+  background: #f1f5f9;
+}
+
+.cashier-eod-entry-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cashier-eod-entry-strip label {
+  display: grid;
+  gap: 5px;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.cashier-eod-entry-strip input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: 0;
+  background: #fff;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cashier-eod-entry-strip input:focus {
+  border-color: #203f30;
+  box-shadow: 0 0 0 3px rgba(32, 63, 48, .12);
+}
+
+.cashier-eod-entry-note {
+  padding-bottom: 11px;
+  color: #64748b;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.cashier-eod-error,
+.cashier-eod-cash-error {
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #991b1b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cashier-eod-receipt-preview {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  justify-content: center;
+  padding: 18px 12px;
+  background: #e2e8f0;
+}
+
+.cashier-eod-receipt-paper.receipt-print-area {
+  width: 80mm !important;
+  min-width: 80mm !important;
+  max-width: 80mm !important;
+  margin: 0 !important;
+  padding: 8px 9px 12px !important;
+  background: #fff !important;
+  color: #000 !important;
+  font-family: 'Courier New', Courier, monospace !important;
+  font-size: 11px !important;
+  line-height: 1.34 !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.cashier-eod-receipt-paper.receipt-print-area * {
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+  color: #000 !important;
+  background: transparent !important;
+}
+
+.eod-center {
+  text-align: center;
+}
+
+.eod-title {
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.eod-line {
+  margin: 6px 0;
+  border-top: 1px solid #000;
+}
+
+.eod-dashed-line {
+  height: 17px;
+  overflow: hidden;
+  text-align: right;
+  line-height: 17px;
+  white-space: nowrap;
+}
+
+.eod-row,
+.eod-item-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.eod-row > span,
+.eod-item-row > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
+.eod-row > b,
+.eod-item-row > b {
+  flex: 0 0 auto;
+  text-align: right;
+  font-weight: 700;
+}
+
+.eod-item-row {
+  gap: 4px;
+}
+
+.eod-item-row > span {
+  overflow: visible;
+  font-size: 10px;
+}
+
+.eod-item-row > b {
+  font-size: 10px;
+}
+
+.eod-strong {
+  font-weight: 900;
+}
+
+.eod-strong > b {
+  font-weight: 900;
+}
+
+.eod-section-heading {
+  margin: 16px 0 5px;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  font-weight: 900;
+  letter-spacing: .02em;
+}
+
+.eod-footer-line {
+  margin-top: 16px;
+}
+
+.cashier-eod-screen-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cashier-eod-done-btn {
+  min-height: 40px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 8px;
+  background: #203f30;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .cashier-eod-backdrop {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .cashier-eod-modal.cashier-eod-receipt-modal {
+    max-height: calc(100dvh - 16px);
+    border-radius: 12px;
+  }
+
+  .cashier-eod-screen-header,
+  .cashier-eod-toolbar,
+  .cashier-eod-body,
+  .cashier-eod-screen-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .cashier-eod-entry-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cashier-eod-entry-note {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+  }
+
+  .cashier-eod-cashier-filter {
+    margin-left: 0;
+  }
+
+  .cashier-eod-print-btn span,
+  .cashier-eod-refresh-btn span {
+    display: none;
+  }
+
+  .cashier-eod-print-btn,
+  .cashier-eod-refresh-btn,
+  .cashier-eod-pill {
+    padding: 0 9px;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .cashier-eod-backdrop,
+  .cashier-eod-receipt-paper,
+  .cashier-eod-receipt-paper * {
+    visibility: visible !important;
+  }
+
+  .cashier-eod-backdrop {
+    position: absolute;
+    inset: 0;
+    display: block;
+    padding: 0;
+    background: #fff;
+  }
+
+  .cashier-eod-modal.cashier-eod-receipt-modal {
+    display: block;
+    width: 80mm;
+    max-width: 80mm;
+    max-height: none;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .cashier-eod-screen-header,
+  .cashier-eod-toolbar,
+  .cashier-eod-entry-strip,
+  .cashier-eod-error,
+  .cashier-eod-cash-error,
+  .cashier-eod-screen-footer,
+  .cashier-eod-receipt-preview {
+    display: none !important;
+  }
+
+  .cashier-eod-receipt-preview {
+    display: block !important;
+    padding: 0;
+    background: #fff;
+  }
+
+  .cashier-eod-receipt-paper.receipt-print-area {
+    display: block;
+    width: 80mm !important;
+    min-width: 80mm !important;
+    max-width: 80mm !important;
+    padding: 0 !important;
+  }
+}
+
+/* EOD summary redesign: white surfaces with one deep-purple accent. */
+.cashier-eod-backdrop {
+  background: rgba(45, 10, 78, .58) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+}
+
+.cashier-eod-modal.cashier-eod-receipt-modal {
+  width: min(980px, calc(100vw - 32px)) !important;
+  max-height: min(92dvh, 920px) !important;
+  border: 1px solid #ddcde6 !important;
+  border-radius: 20px !important;
+  background: #fff !important;
+  box-shadow: 0 28px 80px rgba(45, 10, 78, .28) !important;
+  color: #2d0a4e !important;
+}
+
+.cashier-eod-screen-header {
+  min-height: 76px;
+  padding: 16px 22px !important;
+  border-color: #eadfee !important;
+  background: #fff !important;
+}
+
+.cashier-eod-screen-kicker,
+.cashier-eod-summary-panel header span,
+.cashier-eod-meta-item span,
+.cashier-eod-metric-card > span {
+  color: #796985 !important;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.cashier-eod-title,
+.cashier-eod-summary-panel h3 {
+  color: #542475 !important;
+}
+
+.cashier-eod-title {
+  font-size: 1.35rem !important;
+  letter-spacing: -.025em;
+}
+
+.cashier-eod-print-btn,
+.cashier-eod-refresh-btn,
+.cashier-eod-pill,
+.cashier-eod-done-btn {
+  border: 1px solid #d9c6e5 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  color: #542475 !important;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+}
+
+.cashier-eod-print-btn:hover:not(:disabled),
+.cashier-eod-refresh-btn:hover:not(:disabled),
+.cashier-eod-pill:hover,
+.cashier-eod-close-btn:hover {
+  border-color: #b995cb !important;
+  background: #f0e8f6 !important;
+  color: #542475 !important;
+}
+
+.cashier-eod-print-btn:active:not(:disabled),
+.cashier-eod-refresh-btn:active:not(:disabled),
+.cashier-eod-pill:active,
+.cashier-eod-done-btn:active {
+  transform: translateY(1px);
+}
+
+.cashier-eod-print-btn:focus-visible,
+.cashier-eod-refresh-btn:focus-visible,
+.cashier-eod-pill:focus-visible,
+.cashier-eod-close-btn:focus-visible,
+.cashier-eod-done-btn:focus-visible,
+.cashier-eod-entry-strip input:focus-visible {
+  outline: 3px solid rgba(84, 36, 117, .24) !important;
+  outline-offset: 2px;
+}
+
+.cashier-eod-print-btn {
+  border-color: #542475 !important;
+  background: #542475 !important;
+  color: #fff !important;
+}
+
+.cashier-eod-print-btn:hover:not(:disabled) {
+  border-color: #3f145f !important;
+  background: #3f145f !important;
+  color: #fff !important;
+}
+
+.cashier-eod-pill.active {
+  border-color: #542475 !important;
+  background: #542475 !important;
+  color: #fff !important;
+}
+
+.cashier-eod-pill.active:hover {
+  border-color: #3f145f !important;
+  background: #3f145f !important;
+  color: #fff !important;
+}
+
+.cashier-eod-close-btn {
+  width: 40px !important;
+  height: 40px !important;
+  border: 1px solid transparent !important;
+  color: #542475 !important;
+}
+
+.cashier-eod-toolbar {
+  gap: 10px !important;
+  padding: 12px 22px !important;
+  border-color: #eadfee !important;
+  background: #faf7fc !important;
+}
+
+.cashier-eod-date-picker,
+.cashier-eod-entry-strip,
+.cashier-eod-meta-banner,
+.cashier-eod-summary-panel,
+.cashier-eod-secondary-summary {
+  border-color: #e2d5e9 !important;
+  background: #fff !important;
+}
+
+.cashier-eod-date-picker {
+  border-radius: 9px !important;
+  color: #542475 !important;
+}
+
+.cashier-eod-input,
+.cashier-eod-entry-strip input {
+  color: #2d0a4e !important;
+}
+
+.cashier-eod-body {
+  padding: 18px 22px 22px !important;
+  background: #f7f3f9 !important;
+}
+
+.cashier-eod-entry-strip {
+  margin-bottom: 16px !important;
+  padding: 14px !important;
+  border: 1px solid #e2d5e9 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 6px 18px rgba(45, 10, 78, .04);
+}
+
+.cashier-eod-entry-strip label {
+  color: #542475 !important;
+}
+
+.cashier-eod-entry-strip input {
+  min-height: 42px !important;
+  border-color: #d9c6e5 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+}
+
+.cashier-eod-entry-strip input:focus {
+  border-color: #542475 !important;
+  box-shadow: 0 0 0 3px rgba(84, 36, 117, .12) !important;
+}
+
+.cashier-eod-entry-note {
+  color: #796985 !important;
+}
+
+.cashier-eod-entry-note b {
+  color: #542475;
+  font-variant-numeric: tabular-nums;
+}
+
+.cashier-eod-summary-layout {
+  display: grid;
+  gap: 16px;
 }
 
 .cashier-eod-meta-banner {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-  background: #faf8fc;
-  border: 1px solid #eedbf7;
-  border-radius: 12px;
-  padding: 14px 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #e2d5e9;
+  border-radius: 14px;
 }
 
 .cashier-eod-meta-item {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 13px 14px;
+  background: #fff;
 }
 
-.cashier-eod-meta-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #7c3aed;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 2px;
+.cashier-eod-meta-item strong {
+  overflow-wrap: anywhere;
+  color: #2d0a4e;
+  font-size: .82rem;
+  line-height: 1.25;
 }
 
-.cashier-eod-meta-value {
-  font-size: 14px;
-  font-weight: 700;
-  color: #1e1b4b;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.inline-icon {
-  color: #7c3aed;
-}
-
-/* Metrics Grid */
 .cashier-eod-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-@media (min-width: 600px) {
-  .cashier-eod-metrics-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .cashier-eod-metric-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.cashier-eod-metric-card.highlight-net {
-  background: #fbf7ff;
-  border-color: #d8b4fe;
-}
-
-.cashier-eod-metric-card.highlight-net .cashier-eod-metric-amount {
-  color: #542475;
-}
-
-.cashier-eod-metric-card.highlight-collected {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-}
-
-.cashier-eod-metric-card.highlight-collected .cashier-eod-metric-amount {
-  color: #166534;
-}
-
-.cashier-eod-metric-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  margin-bottom: 4px;
-}
-
-.cashier-eod-metric-amount {
-  font-size: 20px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.02em;
-}
-
-.cashier-eod-metric-hint {
-  font-size: 11px;
-  color: #94a3b8;
-  margin-top: 4px;
-}
-
-.text-negative {
-  color: #dc2626 !important;
-}
-
-/* Payment Breakdown Table */
-.cashier-eod-breakdown-section {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.cashier-eod-section-heading {
-  font-size: 14px;
-  font-weight: 700;
-  color: #334155;
-  margin: 0 0 4px;
-}
-
-.cashier-eod-payment-table {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.cashier-eod-table-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1.5fr;
-  padding: 10px 16px;
-  align-items: center;
-  font-size: 13px;
-  border-bottom: 1px solid #f1f5f9;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+  min-height: 116px;
+  padding: 16px;
+  border: 1px solid #e2d5e9;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 7px 20px rgba(45, 10, 78, .045);
 }
 
-.cashier-eod-table-row:last-child {
-  border-bottom: none;
+.cashier-eod-metric-card strong {
+  overflow-wrap: anywhere;
+  color: #2d0a4e;
+  font-size: clamp(1.05rem, 2vw, 1.42rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
 }
 
-.cashier-eod-table-head {
-  background: #f8fafc;
-  font-weight: 700;
-  color: #475569;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.cashier-eod-metric-card small {
+  color: #796985;
+  font-size: .7rem;
+  line-height: 1.35;
 }
 
-.cashier-eod-table-total {
-  background: #faf8fc;
-  font-weight: 800;
+.cashier-eod-metric-card.is-primary {
+  border-color: #542475;
+  background: #542475;
+}
+
+.cashier-eod-metric-card.is-primary > span,
+.cashier-eod-metric-card.is-primary strong,
+.cashier-eod-metric-card.is-primary small {
+  color: #fff !important;
+}
+
+.cashier-eod-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.cashier-eod-summary-panel {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2d5e9;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.cashier-eod-summary-panel > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px 12px;
+  border-bottom: 1px solid #eadfee;
+}
+
+.cashier-eod-summary-panel h3 {
+  margin: 4px 0 0;
+  font-size: .98rem;
+  letter-spacing: -.01em;
+}
+
+.cashier-eod-summary-panel > header > strong {
   color: #542475;
-  border-top: 2px solid #e9d5ff;
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.font-semibold { font-weight: 600; }
-.font-bold { font-weight: 800; }
+.cashier-eod-summary-list {
+  display: grid;
+  padding: 4px 16px 8px;
+}
 
-/* Modal Footer */
-.cashier-eod-footer {
-  padding: 14px 24px;
-  background: #ffffff;
-  border-top: 1px solid #f1f5f9;
+.cashier-eod-summary-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  padding: 11px 0;
+  border-bottom: 1px solid #f0e8f3;
+}
+
+.cashier-eod-summary-list > div:last-child {
+  border-bottom: 0;
+}
+
+.cashier-eod-summary-list span {
+  min-width: 0;
+  color: #3f145f;
+  font-size: .8rem;
+  line-height: 1.3;
+}
+
+.cashier-eod-summary-list span small {
+  display: block;
+  margin-top: 3px;
+  color: #8a7895;
+  font-size: .68rem;
+}
+
+.cashier-eod-summary-list b {
+  flex: 0 0 auto;
+  color: #2d0a4e;
+  font-size: .8rem;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cashier-eod-summary-list > div.is-emphasis {
+  margin: 0 -5px;
+  padding-inline: 5px;
+  border-radius: 7px;
+  background: #f0e8f6;
+}
+
+.cashier-eod-summary-list > div.is-emphasis span,
+.cashier-eod-summary-list > div.is-emphasis b {
+  color: #542475;
+  font-weight: 850;
+}
+
+.cashier-eod-secondary-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #e2d5e9;
+  border-radius: 12px;
+}
+
+.cashier-eod-secondary-summary > div {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  background: #fff;
 }
 
-.cashier-eod-footer-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #475569;
+.cashier-eod-secondary-summary span {
+  color: #796985;
+  font-size: .74rem;
 }
 
-.cashier-eod-footer-status .text-success {
-  color: #16a34a;
+.cashier-eod-secondary-summary b {
+  color: #542475;
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cashier-eod-screen-footer {
+  padding: 13px 22px !important;
+  border-color: #eadfee !important;
+  background: #fff !important;
+  color: #796985 !important;
 }
 
 .cashier-eod-done-btn {
-  background: #542475;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  padding: 9px 24px;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  min-height: 42px !important;
+  padding: 0 22px !important;
+  border-color: #542475 !important;
+  background: #542475 !important;
+  color: #fff !important;
 }
 
 .cashier-eod-done-btn:hover {
-  background: #3f155b;
+  border-color: #3f145f !important;
+  background: #3f145f !important;
+  color: #fff !important;
 }
 
-.cashier-eod-print-footer {
-  display: none;
-}
-
-/* Button in Transactions View Header */
-.cashier-transactions-eod-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: #f3e8ff;
-  color: #542475;
-  border: 1px solid #d8b4fe;
-  padding: 7px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.cashier-transactions-eod-action:hover {
-  background: #e9d5ff;
-  border-color: #c084fc;
-}
-
-/* Print Styles */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  .cashier-eod-backdrop,
-  .printable-eod-area,
-  .printable-eod-area * {
-    visibility: visible;
-  }
-  .cashier-eod-backdrop {
-    position: absolute;
-    inset: 0;
-    background: transparent;
-    padding: 0;
-  }
-  .cashier-eod-modal {
-    box-shadow: none;
-    border: none;
-    max-height: none;
-  }
-  .cashier-eod-header-actions,
-  .cashier-eod-toolbar,
-  .cashier-eod-footer {
+@media screen {
+  .cashier-eod-receipt-preview {
     display: none !important;
   }
-  .cashier-eod-print-footer {
-    display: block;
-    margin-top: 24px;
-    text-align: center;
-    font-size: 11px;
-    color: #000000;
-    border-top: 1px dashed #000;
-    padding-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .cashier-eod-modal.cashier-eod-receipt-modal {
+    width: calc(100vw - 20px) !important;
+    max-height: calc(100dvh - 20px) !important;
+    border-radius: 16px !important;
+  }
+
+  .cashier-eod-screen-header,
+  .cashier-eod-toolbar,
+  .cashier-eod-body,
+  .cashier-eod-screen-footer {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .cashier-eod-meta-banner,
+  .cashier-eod-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cashier-eod-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cashier-eod-secondary-summary {
+    grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 520px) {
+  .cashier-eod-backdrop {
+    align-items: flex-start;
+    padding: 8px !important;
+  }
+
+  .cashier-eod-modal.cashier-eod-receipt-modal {
+    width: 100% !important;
+    max-height: calc(100dvh - 16px) !important;
+    border-radius: 14px !important;
+  }
+
+  .cashier-eod-header-actions {
+    gap: 4px;
+  }
+
+  .cashier-eod-print-btn,
+  .cashier-eod-refresh-btn {
+    width: 42px;
+    padding: 0 !important;
+  }
+
+  .cashier-eod-print-btn span,
+  .cashier-eod-refresh-btn span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .cashier-eod-toolbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: stretch;
+  }
+
+  .cashier-eod-date-picker {
+    min-width: 0;
+  }
+
+  .cashier-eod-input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cashier-eod-cashier-filter {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+
+  .cashier-eod-cashier-filter .cashier-eod-pill {
+    flex: 1 1 0;
+  }
+
+  .cashier-eod-body {
+    padding-top: 14px !important;
+  }
+
+  .cashier-eod-entry-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .cashier-eod-entry-strip label:last-of-type {
+    grid-column: 1 / -1;
+  }
+
+  .cashier-eod-entry-note {
+    grid-column: 1 / -1;
+    padding-bottom: 0;
+  }
+
+  .cashier-eod-meta-banner,
+  .cashier-eod-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cashier-eod-metric-card {
+    min-height: 96px;
+  }
+}
+
+@media print {
+  .cashier-eod-summary-layout,
+  .cashier-eod-entry-strip {
+    display: none !important;
+  }
+
+  .cashier-eod-summary-body {
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  .cashier-eod-receipt-preview {
+    display: block !important;
+  }
+}
+
+/* Keep expected cash readable as a two-line total beside the cash inputs. */
+.cashier-eod-entry-note {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding-bottom: 0;
+  color: #796985 !important;
+  font-size: .72rem;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+.cashier-eod-entry-label {
+  display: block;
+  color: #796985;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.cashier-eod-entry-note b {
+  display: block;
+  color: #542475 !important;
+  font-size: 1.08rem;
+  font-weight: 900;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Keep the EOD printout paper-white and let the receipt flow to its full height. */
+@media print {
+  html,
+  body {
+    width: 80mm !important;
+    min-width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body {
+    overflow: visible !important;
+  }
+
+  .cashier-v2,
+  .cashier-v2 .cashier-eod-backdrop,
+  .cashier-v2 .cashier-eod-modal.cashier-eod-receipt-modal,
+  .cashier-v2 .cashier-eod-receipt-preview,
+  .cashier-v2 .cashier-eod-receipt-paper.receipt-print-area {
+    width: 80mm !important;
+    min-width: 0 !important;
+    max-width: 80mm !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .cashier-v2,
+  .cashier-v2 .cashier-eod-backdrop,
+  .cashier-v2 .cashier-eod-modal.cashier-eod-receipt-modal,
+  .cashier-v2 .cashier-eod-receipt-preview,
+  .cashier-v2 .cashier-eod-receipt-paper.receipt-print-area {
+    display: block !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .cashier-v2 .cashier-eod-backdrop {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .cashier-v2 .cashier-eod-receipt-paper.receipt-print-area {
+    padding: 8px 9px 12px !important;
+    height: auto !important;
+  }
+
+  .cashier-v2 .cashier-eod-receipt-paper.receipt-print-area,
+  .cashier-v2 .cashier-eod-receipt-paper.receipt-print-area * {
+    visibility: visible !important;
+    background: transparent !important;
+    color: #000 !important;
+  }
+
+  .cashier-v2 .cashier-eod-receipt-paper.receipt-print-area {
+    background: #fff !important;
+  }
+}

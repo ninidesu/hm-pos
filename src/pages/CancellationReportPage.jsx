@@ -237,7 +237,7 @@ function RecordDrawer({ record, onClose, view }) {
       refund.processedAt && { title: 'Refund completed', date: refund.processedAt, text: refund.referenceNumber ? `Reference ${refund.referenceNumber}` : money(refund.amount) },
     ]),
   ].filter(Boolean).sort((a, b) => new Date(a.date) - new Date(b.date))
-  const breakdown = buildVatExemptOrderBreakdown({ subtotal: record.subtotal, discountSubtotal: record.discountSubtotal, discountType: record.discountType, discountAmount: record.discountAmount, vatExemptAmount: record.vatExemptAmount, vatRate: 0, pricesIncludeVat: false })
+  const breakdown = buildVatExemptOrderBreakdown({ subtotal: record.subtotal, discountSubtotal: record.discountSubtotal, discountType: record.discountType, discountAmount: record.discountAmount, vatExemptAmount: record.vatExemptAmount, vatRate: record.vatRate == null ? 0.12 : record.vatRate, pricesIncludeVat: record.pricesIncludeVat == null ? true : record.pricesIncludeVat })
 
   return <div className="ops-drawer-backdrop cancel-drawer-backdrop" onMouseDown={onClose}>
     <aside className="ops-drawer txn-drawer cancel-drawer" role="dialog" aria-modal="true" aria-label={`${view === 'refunds' ? 'Refund' : 'Cancellation'} record ${record.orderNumber}`} onMouseDown={(event) => event.stopPropagation()}>

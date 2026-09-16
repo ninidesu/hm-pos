@@ -20,15 +20,17 @@ import LogoutConfirmModal from '../components/auth/LogoutConfirmModal'
 import CashierClosedBanner from '../components/CashierClosedBanner'
 import CashierClosedModal from '../components/CashierClosedModal'
 import CashierEodModal from '../components/CashierEodModal'
+import CashierOpeningCashModal from '../components/CashierOpeningCashModal'
 import { usePricing } from '../context/usePricing'
 import { getCurrentPortalSession, signOutPortal } from '../lib/auth'
 import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizeDecimal, sanitizeDigits, sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
 import { getBusinessDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
-import { buildVatExemptOrderBreakdown } from '../utils/pricing'
+import { DEFAULT_PRICING, buildVatExemptOrderBreakdown } from '../utils/pricing'
 import useStoreInfo from '../hooks/useStoreInfo'
 import { StoreReceiptBrand, StoreReceiptFooter } from '../components/StoreReceiptBrand'
+import { getCashierOpening, getCashierOpeningStorageKey, saveCashierOpening, saveEodStartingCash } from '../services/cashierOpeningService'
 
 const paymentMethods = [
   { value: 'Cash', label: 'Cash', icon: Banknote },
@@ -68,7 +70,11 @@ const addonTotal = (addons = []) => addons.reduce((sum, addon) => sum + Number(a
 const baseUnitPrice = (item) => Number(item.customizations?.variantPrice ?? item.price ?? 0)
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100
 const itemBaseTotal = (item) => baseUnitPrice(item) * Number(item.qty || item.quantity || 0)
-const itemDiscountAmount = (item) => roundMoney(itemBaseTotal(item) * 0.2)
+const itemDiscountAmount = (item, pricing = DEFAULT_PRICING) => {
+  const baseAmount = itemBaseTotal(item)
+  const taxableBase = pricing.pricesIncludeVat ? baseAmount / (1 + Number(pricing.vatRate || 0)) : baseAmount
+  return roundMoney(taxableBase * 0.2)
+}
 const lineUnitPrice = (item) => baseUnitPrice(item) + addonTotal(item.addons)
 const itemLineTotal = (item) => lineUnitPrice(item) * Number(item.qty || item.quantity || 0)
 const emptyDiscount = () => ({ enabled: false, type: '', customerName: '', idNumber: '', discountedLineKeys: [] })
@@ -286,6 +292,7 @@ function normalizeOrder(row) {
     discountType: row.discount_type || '',
     discountSubtotal: Number(row.discount_subtotal || 0),
     total: Number(row.final_total || row.subtotal || 0),
+    vatExemptAmount: row.vat_exempt_amount == null ? null : Number(row.vat_exempt_amount),
     paymentMethod: payment?.method || row.payment_method || 'Cash',
     paymentReference: payment?.reference_number || row.payment_reference || '',
     bankName: payment?.bank_name || row.bank_name || '',
@@ -317,20 +324,20 @@ function storedOrderVatBreakdown(order) {
     discountType: order.discountType,
     discountAmount: order.discountAmount,
     vatExemptAmount: order.vatExemptAmount,
-    vatRate: 0,
-    pricesIncludeVat: false,
+    vatRate: order.vatRate == null ? DEFAULT_PRICING.vatRate : order.vatRate,
+    pricesIncludeVat: order.pricesIncludeVat == null ? DEFAULT_PRICING.pricesIncludeVat : order.pricesIncludeVat,
   })
 }
 
-function cartVatBreakdown({ subtotal, discount, discountBreakdown }) {
+function cartVatBreakdown({ subtotal, discount, discountBreakdown, vatRate = DEFAULT_PRICING.vatRate, pricesIncludeVat = DEFAULT_PRICING.pricesIncludeVat }) {
   return buildVatExemptOrderBreakdown({
     subtotal,
     discountSubtotal: discount.enabled ? discountBreakdown.discountSubtotal : 0,
     discountType: discount.enabled ? discount.type : '',
-    discountAmount: discount.enabled ? discountBreakdown.totalBenefitAmount : 0,
-    vatExemptAmount: discount.enabled ? discountBreakdown.vatExemptAmount : 0,
-    vatRate: 0,
-    pricesIncludeVat: false,
+    discountAmount: 0,
+    vatExemptAmount: 0,
+    vatRate,
+    pricesIncludeVat,
   })
 }
 
@@ -372,6 +379,11 @@ export default function CashierPage() {
   const [showCheckout, setShowCheckout] = useState(false)
   const [showEodModal, setShowEodModal] = useState(false)
   const [showClosedModal, setShowClosedModal] = useState(() => getOperatingHoursStatus().isClosed)
+  const [showOpeningCashModal, setShowOpeningCashModal] = useState(false)
+  const [openingCash, setOpeningCash] = useState('')
+  const [openingCashError, setOpeningCashError] = useState('')
+  const [savingOpeningCash, setSavingOpeningCash] = useState(false)
+  const [openingPromptKey, setOpeningPromptKey] = useState('')
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [mobileCartOpen, setMobileCartOpen] = useState(false)
   const [error, setError] = useState('')
@@ -402,7 +414,7 @@ export default function CashierPage() {
         setCashierProfile(profile)
         const [productResult, orderResult] = await Promise.all([
           loadMenuItems(),
-          supabase.from('orders').select('id,order_number,receipt_number,cashier_id,subtotal,discount_subtotal,discount_amount,final_total,vat_rate,prices_include_vat,payment_status,payment_confirmed,discount_type,discount_customer_name,discount_id_number,created_at,order_items(*),payments:transactions(*)').not('cashier_id', 'is', null).order('created_at', { ascending: false }).limit(30),
+          supabase.from('orders').select('id,order_number,receipt_number,cashier_id,subtotal,discount_subtotal,discount_amount,vat_exempt_amount,final_total,vat_rate,prices_include_vat,payment_status,payment_confirmed,discount_type,discount_customer_name,discount_id_number,created_at,order_items(*),payments:transactions(*)').not('cashier_id', 'is', null).order('created_at', { ascending: false }).limit(30),
         ])
         if (ignore) return
         if (!productResult.error) {
@@ -492,12 +504,16 @@ export default function CashierPage() {
     return () => window.clearInterval(clockTimer)
   }, [])
 
-  const operatingStatus = useMemo(() => getOperatingHoursStatus(clock), [clock])
+  const storeOpenTime = storeInfo.openTime
+  const storeCloseTime = storeInfo.closeTime
+  const operatingStatus = useMemo(() => getOperatingHoursStatus(clock, { openTime: storeOpenTime, closeTime: storeCloseTime }), [clock, storeOpenTime, storeCloseTime])
   const isPosClosed = operatingStatus.isClosed
+  const businessDateKey = useMemo(() => getBusinessDateKey(clock, { openTime: storeOpenTime, closeTime: storeCloseTime }), [clock, storeOpenTime, storeCloseTime])
+  const openingStorageKey = useMemo(() => getCashierOpeningStorageKey(cashierProfile?.id, businessDateKey), [cashierProfile?.id, businessDateKey])
   const prevIsOpenRef = useRef(operatingStatus.isOpen)
 
   useEffect(() => {
-    // Automatically close selling session when transitioning to closed (at exactly 10:00 PM)
+    // Automatically close the selling session when the configured closing time arrives.
     if (prevIsOpenRef.current && operatingStatus.isClosed) {
       setShowCheckout(false)
       setCustomizingProduct(null)
@@ -507,6 +523,26 @@ export default function CashierPage() {
     }
     prevIsOpenRef.current = operatingStatus.isOpen
   }, [operatingStatus.isOpen, operatingStatus.isClosed])
+
+  useEffect(() => {
+    // Store hours may be loaded after the cashier first renders. Clear a stale
+    // closed prompt if the newly loaded configuration says the POS is open.
+    if (operatingStatus.isOpen) setShowClosedModal(false)
+  }, [operatingStatus.isOpen])
+
+  useEffect(() => {
+    if (!cashierProfile?.id || !operatingStatus.isOpen || !openingStorageKey) return
+    if (getCashierOpening(cashierProfile.id, businessDateKey)) {
+      setOpeningPromptKey(openingStorageKey)
+      setShowOpeningCashModal(false)
+      return
+    }
+    if (openingPromptKey === openingStorageKey) return
+    setOpeningPromptKey(openingStorageKey)
+    setOpeningCash('')
+    setOpeningCashError('')
+    setShowOpeningCashModal(true)
+  }, [businessDateKey, cashierProfile?.id, openingPromptKey, openingStorageKey, operatingStatus.isOpen])
 
   useEffect(() => {
     try {
@@ -550,10 +586,8 @@ export default function CashierPage() {
   const discountSubtotal = discount.enabled
     ? cart.filter((item) => discountedLineKeys.includes(item.lineKey)).reduce((sum, item) => sum + itemBaseTotal(item), 0)
     : 0
-  const discountAmount = discount.enabled ? roundMoney(discountSubtotal * 0.2) : 0
   const discountBreakdown = {
     discountSubtotal,
-    totalBenefitAmount: discountAmount,
     vatExemptAmount: 0,
   }
   const priceBreakdown = cartVatBreakdown({
@@ -563,6 +597,7 @@ export default function CashierPage() {
     vatRate: pricing.vatRate,
     pricesIncludeVat: pricing.pricesIncludeVat,
   })
+  const discountAmount = discount.enabled ? priceBreakdown.discountAmount : 0
   const total = Math.max(0, priceBreakdown.totalAmount)
   const change = payment.method === 'Cash' ? Math.max(0, Number(payment.cashReceived || 0) - total) : 0
   const cashierName = getAccountDisplayName(cashierProfile, 'Cashier')
@@ -597,6 +632,29 @@ export default function CashierPage() {
       setActiveOrderId(nextTab.id)
       return [...current, nextTab]
     })
+  }
+
+  function confirmOpeningCash() {
+    const amount = Number(openingCash)
+    if (!openingCash.trim() || !Number.isFinite(amount) || amount < 0) {
+      setOpeningCashError('Enter the cash amount currently in the POS drawer.')
+      return
+    }
+    const normalizedAmount = Math.round(amount * 100) / 100
+    setSavingOpeningCash(true)
+    setOpeningCashError('')
+    if (!cashierProfile?.id || !businessDateKey || !saveEodStartingCash(cashierProfile.id, businessDateKey, normalizedAmount)) {
+      setOpeningCashError('The starting cash could not be saved. Check browser storage and try again.')
+      setSavingOpeningCash(false)
+      return
+    }
+    if (!saveCashierOpening({ cashierId: cashierProfile.id, businessDate: businessDateKey, startingCash: normalizedAmount })) {
+      setOpeningCashError('The opening confirmation could not be saved. Check browser storage and try again.')
+      setSavingOpeningCash(false)
+      return
+    }
+    setShowOpeningCashModal(false)
+    setSavingOpeningCash(false)
   }
 
   function closeOrderTab(tabId) {
@@ -671,9 +729,9 @@ export default function CashierPage() {
   async function saveOrder() {
     if (savingOrder) return false
     setError('')
-    if (getOperatingHoursStatus(new Date()).isClosed) {
+    if (getOperatingHoursStatus(new Date(), storeInfo).isClosed) {
       setShowClosedModal(true)
-      return setError('POS is currently closed. Operating hours are 6:00 AM – 10:00 PM.')
+      return setError(operatingStatus.closedMessage)
     }
     if (!isSupabaseConfigured) return setError('Supabase is not configured yet. Add the POS environment variables before saving an order.')
     if (!cart.length) return setError('Add at least one item to the cart.')
@@ -704,13 +762,14 @@ export default function CashierPage() {
         discountIdNumber: discount.enabled ? discount.idNumber : '',
         vatRate: pricing.vatRate,
         pricesIncludeVat: pricing.pricesIncludeVat,
+        vatExemptAmount: priceBreakdown.vatExemptAmount,
         discountSubtotal,
         cashierName,
         total,
         createdAt: new Date().toISOString(),
         items: cart.map((item) => {
           const isDiscounted = discount.enabled && discountedLineKeys.includes(item.lineKey)
-          return { ...item, isDiscounted, discount_amount: isDiscounted ? itemDiscountAmount(item) : 0, unitPrice: lineUnitPrice(item), line_total: itemLineTotal(item) }
+          return { ...item, isDiscounted, discount_amount: isDiscounted ? itemDiscountAmount(item, pricing) : 0, unitPrice: lineUnitPrice(item), line_total: itemLineTotal(item) }
         }),
       }
 
@@ -723,6 +782,7 @@ export default function CashierPage() {
         discount_id_number: discount.enabled ? discount.idNumber : null,
         discount_subtotal: discount.enabled ? discountSubtotal : 0,
         discount_amount: discountAmount,
+        vat_exempt_amount: discount.enabled ? priceBreakdown.vatExemptAmount : 0,
         final_total: total,
         payment_status: 'paid',
         payment_confirmed: true,
@@ -737,7 +797,7 @@ export default function CashierPage() {
           quantity: item.qty,
           line_total: itemLineTotal(item),
           is_discounted: isDiscounted,
-          discount_amount: isDiscounted ? itemDiscountAmount(item) : 0,
+          discount_amount: isDiscounted ? itemDiscountAmount(item, pricing) : 0,
           customizations: item.customizations || {},
           addons: item.addons || [],
         }
@@ -835,7 +895,7 @@ export default function CashierPage() {
 
   return (
     <div className={`cashier-v2 legacy-cashier ${isFullscreen ? 'cashier-is-fullscreen' : ''} ${isPosClosed ? 'is-pos-closed' : ''}`}>
-      {isPosClosed ? <CashierClosedBanner onOpenEod={() => setShowEodModal(true)} /> : null}
+      {isPosClosed ? <CashierClosedBanner operatingStatus={operatingStatus} onOpenEod={() => setShowEodModal(true)} /> : null}
       <header className="legacy-cashier-top">
         <div className="cashier-top-left">
           {storeInfo.logoUrl ? <img className="cashier-brand-mark cashier-brand-logo" src={storeInfo.logoUrl} alt=""/> : <span className="cashier-brand-mark" aria-hidden="true">{storeInitials}</span>}
@@ -866,9 +926,9 @@ export default function CashierPage() {
             {showTransactions ? <ShoppingBag size={21} /> : <ReceiptText size={21} />}
             <span>{showTransactions ? 'Back to POS' : 'Transactions'}</span>
           </button>
-          <button type="button" className={`cashier-workspace-nav-button ${showEodModal ? 'is-active' : ''}`} onClick={() => setShowEodModal(true)} aria-label="End of Day">
+          <button type="button" className={`cashier-workspace-nav-button ${showEodModal ? 'is-active' : ''}`} onClick={() => setShowEodModal(true)} aria-label="EOD Summary">
             <FileSpreadsheet size={21} />
-            <span>End of Day</span>
+            <span>EOD Summary</span>
           </button>
           <button type="button" className="cashier-signout-button" onClick={() => setLogoutOpen(true)} aria-label="Sign out"><LogOut size={21} aria-hidden="true" /><span>Sign out</span></button>
         </nav>
@@ -918,7 +978,7 @@ export default function CashierPage() {
             </div>
             <div className="legacy-pos-heading">
               <div>
-                <div className="cashier-menu-title-row"><div className="cashier-menu-title"><h1>Menu</h1><button type="button" className="cashier-fullscreen" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}><Expand size={16} /> <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span></button></div><div className="cashier-menu-actions"><button type="button" className="cashier-new-order" onClick={openNewOrderTab} disabled={isPosClosed || orderTabs.length >= MAX_OPEN_ORDER_TABS} title={isPosClosed ? 'POS is currently closed (6:00 AM – 10:00 PM)' : undefined}><Plus size={18} /> New Order</button></div></div>
+              <div className="cashier-menu-title-row"><div className="cashier-menu-title"><h1>Menu</h1><button type="button" className="cashier-fullscreen" onClick={toggleFullscreen} aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}><Expand size={16} /> <span>{isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}</span></button></div><div className="cashier-menu-actions"><button type="button" className="cashier-new-order" onClick={openNewOrderTab} disabled={isPosClosed || orderTabs.length >= MAX_OPEN_ORDER_TABS} title={isPosClosed ? operatingStatus.closedMessage : undefined}><Plus size={18} /> New Order</button></div></div>
               </div>
             </div>
             {notice ? <div className="cashier-sync-note">{notice}</div> : null}
@@ -940,7 +1000,7 @@ export default function CashierPage() {
             <div className="cashier-checkout-block">
               <OrderSummary subtotal={subtotal} total={total} breakdown={priceBreakdown} />
               {error ? <div className="cashier-error">{error}</div> : null}
-              <button type="button" className="legacy-charge" onClick={() => { setMobileCartOpen(false); setShowCheckout(true) }} disabled={isPosClosed || !cart.length} title={isPosClosed ? 'POS is currently closed (6:00 AM – 10:00 PM)' : undefined}>Checkout</button>
+              <button type="button" className="legacy-charge" onClick={() => { setMobileCartOpen(false); setShowCheckout(true) }} disabled={isPosClosed || !cart.length} title={isPosClosed ? operatingStatus.closedMessage : undefined}>Checkout</button>
             </div>
           </aside>
           {mobileCartOpen ? <div className="cashier-cart-backdrop" onClick={() => setMobileCartOpen(false)} /> : null}
@@ -950,6 +1010,18 @@ export default function CashierPage() {
         <div><span>{cartCount} {cartCount === 1 ? 'item' : 'items'}</span><strong>{peso(total)}</strong></div>
         <button type="button" onClick={() => setMobileCartOpen(true)}><ShoppingBag size={16} /> View order</button>
       </div> : null}
+      <CashierOpeningCashModal
+        open={showOpeningCashModal}
+        cashierName={cashierName}
+        storeName={storeInfo.name || 'HM POS'}
+        openingLabel={operatingStatus.openLabel}
+        greeting={clock.getHours() < 12 ? 'Good morning' : clock.getHours() < 18 ? 'Good afternoon' : 'Good evening'}
+        value={openingCash}
+        error={openingCashError}
+        saving={savingOpeningCash}
+        onChange={(value) => { setOpeningCash(sanitizeDecimal(value)); setOpeningCashError('') }}
+        onConfirm={confirmOpeningCash}
+      />
       <LogoutConfirmModal open={logoutOpen} busy={loggingOut} onCancel={() => setLogoutOpen(false)} onConfirm={logout} />
 
       {showCheckout ? <CheckoutModal cart={cart} total={total} discount={discount} breakdown={priceBreakdown} setDiscount={setDiscount} payment={payment} setPayment={setPayment} change={change} error={error} saving={savingOrder} onCancel={() => { if (!savingOrder) { setShowCheckout(false); setError('') } }} onConfirm={async () => { if (await saveOrder()) setShowCheckout(false) }} /> : null}
@@ -960,12 +1032,13 @@ export default function CashierPage() {
         open={showClosedModal}
         onClose={() => setShowClosedModal(false)}
         onOpenEod={() => setShowEodModal(true)}
+        operatingStatus={operatingStatus}
       />
       <CashierEodModal
         open={showEodModal}
         onClose={() => setShowEodModal(false)}
         cashierProfile={cashierProfile}
-        initialDateKey={getBusinessDateKey(clock)}
+        initialDateKey={businessDateKey}
         storeInfo={storeInfo}
       />
     </div>
@@ -1171,14 +1244,19 @@ function PaymentPanel({ payment, setPayment, total, change }) {
 }
 
 function CashierBreakdownRows({ breakdown }) {
+  const subtotalLabel = breakdown?.pricesIncludeVat ? 'Subtotal before VAT' : 'Subtotal'
+  const vatRows = breakdown?.pricesIncludeVat && Number(breakdown?.vatAmount || 0) > 0
+    ? <p><span>VAT included ({Math.round(Number(breakdown.vatRate || 0) * 100)}%)</span><b>{peso(breakdown.vatAmount)}</b></p>
+    : null
   if (breakdown?.isVatExemptDiscount) {
     return <>
-      <p><span>Subtotal</span><b>{peso(breakdown.baseAmount)}</b></p>
+      <p><span>{subtotalLabel}</span><b>{peso(breakdown.baseAmount)}</b></p>
+      {vatRows}
       <p><span>Discount</span><b>-{peso(breakdown.discountAmount)}</b></p>
     </>
   }
 
-  return <p><span>Subtotal</span><b>{peso(breakdown?.baseAmount || 0)}</b></p>
+  return <><p><span>{subtotalLabel}</span><b>{peso(breakdown?.baseAmount || 0)}</b></p>{vatRows}</>
 }
 
 function OrderSummary({ subtotal, total, breakdown }) {

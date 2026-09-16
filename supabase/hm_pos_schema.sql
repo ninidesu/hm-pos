@@ -251,13 +251,45 @@ create table if not exists public.portal_configuration (
 
 insert into public.portal_configuration (scope, key, value, is_public)
 values
-  ('system', 'pricing', '{"vatRate":0,"pricesIncludeVat":false,"currency":"PHP","version":2}'::jsonb, false),
+  ('system', 'pricing', '{"vatRate":0.12,"pricesIncludeVat":true,"currency":"PHP","version":3}'::jsonb, true),
+  ('system', 'store', '{"openTime":"06:00","closeTime":"22:00"}'::jsonb, true),
   ('system', 'payments', '{"enabledMethods":["cash","gcash","bank_transfer"]}'::jsonb, false)
 on conflict (scope, key) do nothing;
 
 drop trigger if exists hm_pos_configuration_updated_at on public.portal_configuration;
 create trigger hm_pos_configuration_updated_at before update on public.portal_configuration
   for each row execute function public.hm_pos_set_updated_at();
+
+create or replace function public.hm_pos_get_store_hours()
+returns table(open_time time, close_time time)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  store_policy jsonb;
+  configured_open text;
+  configured_close text;
+begin
+  select value into store_policy
+    from public.portal_configuration
+   where scope = 'system' and key = 'store';
+  configured_open := coalesce(store_policy->>'openTime', '06:00');
+  configured_close := coalesce(store_policy->>'closeTime', '22:00');
+  if configured_open !~ '^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$' then configured_open := '06:00'; end if;
+  if configured_close !~ '^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$' then configured_close := '22:00'; end if;
+  open_time := configured_open::time;
+  close_time := configured_close::time;
+  if close_time <= open_time then
+    open_time := '06:00:00'::time;
+    close_time := '22:00:00'::time;
+  end if;
+  return next;
+end;
+$$;
+
+revoke all on function public.hm_pos_get_store_hours() from public, anon, authenticated;
 
 create table if not exists public.portal_audit_events (
   id uuid primary key default gen_random_uuid(),
@@ -423,8 +455,8 @@ create table if not exists public.orders (
   discount_amount numeric(12,2) not null default 0 check (discount_amount >= 0),
   vat_exempt_amount numeric(12,2) not null default 0 check (vat_exempt_amount >= 0),
   final_total numeric(12,2) not null default 0 check (final_total >= 0),
-  vat_rate numeric(6,5) not null default 0 check (vat_rate >= 0),
-  prices_include_vat boolean not null default false,
+  vat_rate numeric(6,5) not null default 0.12 check (vat_rate >= 0),
+  prices_include_vat boolean not null default true,
   payment_status text not null default 'paid' check (payment_status in ('paid', 'voided')),
   payment_confirmed boolean not null default true,
   is_voided boolean not null default false,
@@ -520,6 +552,35 @@ $$;
 drop trigger if exists hm_pos_assign_receipt_numbers on public.orders;
 create trigger hm_pos_assign_receipt_numbers before insert on public.orders
   for each row execute function public.hm_pos_assign_receipt_numbers();
+
+create or replace function public.hm_pos_validate_cashier_operating_hours()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_time time;
+  v_open_time time;
+  v_close_time time;
+begin
+  -- The canonical installer only has cashier orders at this point. Later
+  -- migrations add order_source and replace this function with the richer
+  -- cashier/customer-order condition.
+  if new.cashier_id is not null then
+    v_time := (coalesce(new.created_at, clock_timestamp()) at time zone 'Asia/Manila')::time;
+    select open_time, close_time into v_open_time, v_close_time from public.hm_pos_get_store_hours();
+    if v_time < v_open_time or v_time >= v_close_time then
+      raise exception 'POS is currently closed. Operating hours are % – %.', to_char(v_open_time, 'HH12:MI AM'), to_char(v_close_time, 'HH12:MI AM');
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists hm_pos_validate_cashier_operating_hours_trigger on public.orders;
+create trigger hm_pos_validate_cashier_operating_hours_trigger before insert on public.orders
+  for each row execute function public.hm_pos_validate_cashier_operating_hours();
 
 -- ---------------------------------------------------------------------------
 -- Admin menu and stock RPCs
@@ -769,8 +830,8 @@ declare
   v_discount_amount numeric(12,2) := greatest(0, coalesce((v_order ->> 'discount_amount')::numeric, 0));
   v_discount_subtotal numeric(12,2) := greatest(0, coalesce((v_order ->> 'discount_subtotal')::numeric, 0));
   v_final_total numeric(12,2);
-  v_vat_rate numeric(6,5) := 0;
-  v_prices_include_vat boolean := false;
+  v_vat_rate numeric(6,5) := 0.12;
+  v_prices_include_vat boolean := true;
   v_method text := lower(coalesce(v_payment ->> 'method', 'cash'));
   v_received numeric(12,2);
   v_change numeric(12,2);
