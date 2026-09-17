@@ -113,6 +113,13 @@ export async function savePaymentConfiguration(settings, qrFiles = {}) {
   }
 }
 
+export async function fetchPublicStoreConfiguration() {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('hm_pos_get_public_store_info')
+  if (error) throw error
+  return { ...SYSTEM_DEFAULTS.store, ...(data || {}) }
+}
+
 export async function saveStoreConfiguration(settings, logoFile = null) {
   requireSupabase()
   const next = { ...SYSTEM_DEFAULTS.store, ...settings }
