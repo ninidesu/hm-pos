@@ -8802,7 +8802,8 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
   border: 1px solid #fca5a5;
   border-radius: 12px;
   margin: 12px 18px 0;
-  padding: 10px 20px;
+  min-height: 48px;
+  padding: 6px 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -8814,24 +8815,28 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
 .cashier-closed-banner-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .cashier-closed-banner-icon {
   color: #dc2626;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
 }
 
 .cashier-closed-banner-text {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  gap: 6px;
   align-items: center;
   text-align: center;
+  white-space: nowrap;
 }
 
 .cashier-closed-banner-title {
   color: #991b1b;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -8840,7 +8845,6 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
   color: #991b1b;
   font-size: 14px;
   font-weight: 700;
-  margin-top: 1px;
 }
 
 .cashier-closed-banner-eod-btn {
@@ -9195,6 +9199,7 @@ html[data-theme="dark"] .cashier-v2 .legacy-pos-layout:not(.cashier-transactions
   color: #1f2937;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .cashier-eod-entry-strip input:focus {

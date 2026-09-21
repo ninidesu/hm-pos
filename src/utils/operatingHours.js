@@ -4,6 +4,27 @@ export const DEFAULT_OPERATING_HOURS = Object.freeze({
 })
 
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/
+const MANILA_TIME_ZONE = 'Asia/Manila'
+
+function getManilaDateParts(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value)
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MANILA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date)
+  const values = Object.fromEntries(parts.filter(({ type }) => type !== 'literal').map(({ type, value: partValue }) => [type, Number(partValue)]))
+  return values
+}
+
+function formatDateKey(year, month, day) {
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
 
 function minutesFromTime(value) {
   const [hour, minute] = value.split(':').map(Number)
@@ -46,11 +67,8 @@ export const OPERATING_HOURS = Object.freeze({
  * Evaluates based on the provided date (local system time).
  */
 export function getOperatingHoursStatus(date = new Date(), configuredHours = {}) {
-  const current = date instanceof Date ? date : new Date(date)
   const hours = normalizeOperatingHours(configuredHours)
-  const hour = current.getHours()
-  const minute = current.getMinutes()
-  const second = current.getSeconds()
+  const { hour, minute, second } = getManilaDateParts(date)
 
   const currentSeconds = (hour * 3600) + (minute * 60) + second
   const openSeconds = minutesFromTime(hours.openTime) * 60
@@ -91,14 +109,13 @@ export function getOperatingHoursStatus(date = new Date(), configuredHours = {})
  * part of the previous day's shift for auditing/EOD reporting purposes.
  */
 export function getBusinessDateKey(date = new Date(), configuredHours = {}) {
-  const current = date instanceof Date ? new Date(date) : new Date(date)
   const hours = normalizeOperatingHours(configuredHours)
-  const currentTime = `${String(current.getHours()).padStart(2, '0')}:${String(current.getMinutes()).padStart(2, '0')}`
-  if (minutesFromTime(currentTime) < minutesFromTime(hours.openTime)) current.setDate(current.getDate() - 1)
-  const year = current.getFullYear()
-  const month = String(current.getMonth() + 1).padStart(2, '0')
-  const day = String(current.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const current = getManilaDateParts(date)
+  const currentMinutes = (current.hour * 60) + current.minute
+  if (currentMinutes >= minutesFromTime(hours.openTime)) return formatDateKey(current.year, current.month, current.day)
+
+  const previousDate = new Date(Date.UTC(current.year, current.month - 1, current.day - 1))
+  return formatDateKey(previousDate.getUTCFullYear(), previousDate.getUTCMonth() + 1, previousDate.getUTCDate())
 }
 
 /**
@@ -106,11 +123,8 @@ export function getBusinessDateKey(date = new Date(), configuredHours = {}) {
  * EOD reports use this so their date matches the date shown in Transaction History.
  */
 export function getCalendarDateKey(date = new Date()) {
-  const current = date instanceof Date ? new Date(date) : new Date(date)
-  const year = current.getFullYear()
-  const month = String(current.getMonth() + 1).padStart(2, '0')
-  const day = String(current.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  const current = getManilaDateParts(date)
+  return formatDateKey(current.year, current.month, current.day)
 }
 
 /**

@@ -26,7 +26,7 @@ import { getCurrentPortalSession, signOutPortal } from '../lib/auth'
 import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizeDecimal, sanitizeDigits, sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
-import { getBusinessDateKey, getCalendarDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
+import { getBusinessDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
 import { DEFAULT_PRICING, buildVatExemptOrderBreakdown } from '../utils/pricing'
 import useStoreInfo from '../hooks/useStoreInfo'
 import { StoreReceiptBrand, StoreReceiptFooter } from '../components/StoreReceiptBrand'
@@ -1038,7 +1038,7 @@ export default function CashierPage() {
         open={showEodModal}
         onClose={() => setShowEodModal(false)}
         cashierProfile={cashierProfile}
-        initialDateKey={getCalendarDateKey(clock)}
+        initialDateKey={businessDateKey}
         storeInfo={storeInfo}
       />
     </div>

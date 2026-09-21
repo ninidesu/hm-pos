@@ -314,6 +314,30 @@ $$;
 
 revoke all on function public.hm_pos_get_store_hours() from public, anon, authenticated;
 
+create or replace function public.hm_pos_assert_cashier_operating_hours()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_now time := (clock_timestamp() at time zone 'Asia/Manila')::time;
+  v_open_time time;
+  v_close_time time;
+begin
+  select open_time, close_time
+    into v_open_time, v_close_time
+    from public.hm_pos_get_store_hours();
+  if v_now < v_open_time or v_now >= v_close_time then
+    raise exception 'POS is currently closed. Operating hours are % – %.',
+      to_char(v_open_time, 'HH12:MI AM'),
+      to_char(v_close_time, 'HH12:MI AM');
+  end if;
+end;
+$$;
+
+revoke all on function public.hm_pos_assert_cashier_operating_hours() from public, anon, authenticated;
+
 create table if not exists public.portal_audit_events (
   id uuid primary key default gen_random_uuid(),
   occurred_at timestamptz not null default now(),
@@ -583,19 +607,12 @@ security definer
 set search_path = public
 as $$
 declare
-  v_time time;
-  v_open_time time;
-  v_close_time time;
+  v_new jsonb := to_jsonb(new);
 begin
-  -- The canonical installer only has cashier orders at this point. Later
-  -- migrations add order_source and replace this function with the richer
-  -- cashier/customer-order condition.
-  if new.cashier_id is not null then
-    v_time := (coalesce(new.created_at, clock_timestamp()) at time zone 'Asia/Manila')::time;
-    select open_time, close_time into v_open_time, v_close_time from public.hm_pos_get_store_hours();
-    if v_time < v_open_time or v_time >= v_close_time then
-      raise exception 'POS is currently closed. Operating hours are % – %.', to_char(v_open_time, 'HH12:MI AM'), to_char(v_close_time, 'HH12:MI AM');
-    end if;
+  -- Use JSON so this trigger remains compatible with older installations
+  -- that still have the retired order_source column.
+  if nullif(v_new->>'cashier_id', '') is not null or v_new->>'order_source' = 'cashier_pos' then
+    perform public.hm_pos_assert_cashier_operating_hours();
   end if;
   return new;
 end;
@@ -860,6 +877,7 @@ declare
   v_change numeric(12,2);
 begin
   perform public.hm_pos_assert_staff();
+  perform public.hm_pos_assert_cashier_operating_hours();
   if jsonb_typeof(request_payload -> 'items') <> 'array' or jsonb_array_length(request_payload -> 'items') = 0 then
     raise exception 'At least one menu item is required';
   end if;

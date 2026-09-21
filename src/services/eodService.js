@@ -150,17 +150,16 @@ export async function fetchEodSummary({ businessDate, cashierId = null, cashierN
   if (!businessDate) throw new Error('Business date is required to generate the End of Day receipt.')
 
   const configuredHours = normalizeOperatingHours({ openTime: openingTime, closeTime: closingTime })
-  // Match the calendar date shown in Transaction History. Operating-hour
-  // enforcement still controls new sales; historical out-of-hours records
-  // remain visible for audit instead of disappearing from EOD.
-  const dateFrom = `${businessDate}T00:00:00+08:00`
-  const dateTo = `${businessDate}T23:59:59.999+08:00`
+  // EOD is a sales report for the configured operating window. Orders that
+  // were created outside that window are not treated as that day's sales.
+  const dateFrom = `${businessDate}T${configuredHours.openTime}:00+08:00`
+  const dateTo = `${businessDate}T${configuredHours.closeTime}:00+08:00`
   let query = supabase
     .from('orders')
     .select('id,order_number,receipt_number,subtotal,discount_type,discount_subtotal,discount_amount,final_total,vat_rate,prices_include_vat,vat_exempt_amount,payment_status,payment_confirmed,is_voided,voided_reason,voided_at,cashier_id,created_at,order_items(item_name,display_name,unit_price,quantity,line_total,is_discounted,discount_amount,vat_exempt_amount),payments:transactions(id,method,amount_due,amount_received,status)')
     .not('cashier_id', 'is', null)
     .gte('created_at', dateFrom)
-    .lte('created_at', dateTo)
+    .lt('created_at', dateTo)
     .order('created_at', { ascending: true })
 
   if (cashierId) query = query.eq('cashier_id', cashierId)

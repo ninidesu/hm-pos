@@ -52,6 +52,32 @@ const mergeGroup = (defaults, rows) => {
   return result
 }
 
+const firstDefined = (value, keys, fallback = '') => {
+  for (const key of keys) {
+    if (value?.[key] !== undefined && value?.[key] !== null) return value[key]
+  }
+  return fallback
+}
+
+export function normalizeStoreConfiguration(value = {}) {
+  const source = value || {}
+  const rawLogo = String(firstDefined(source, ['logoUrl', 'logo_url', 'logoPath', 'logo_path'], '') || '')
+  let logoUrl = rawLogo
+  if (rawLogo && !/^https?:\/\//i.test(rawLogo)) {
+    const path = rawLogo.replace(/^\/+/, '').replace(/^portal-assets\//i, '')
+    logoUrl = supabase?.storage.from('portal-assets').getPublicUrl(path).data?.publicUrl || rawLogo
+  }
+  return {
+    ...SYSTEM_DEFAULTS.store,
+    ...source,
+    name: firstDefined(source, ['name', 'storeName', 'store_name'], SYSTEM_DEFAULTS.store.name),
+    address: firstDefined(source, ['address', 'storeAddress', 'store_address'], ''),
+    email: firstDefined(source, ['email', 'contactEmail', 'contact_email'], ''),
+    phone: firstDefined(source, ['phone', 'contactNumber', 'contact_number', 'contactPhone', 'contact_phone'], ''),
+    logoUrl,
+  }
+}
+
 function requireSupabase() {
   if (!isSupabaseConfigured || !supabase) throw new Error('Supabase is not configured for this workspace.')
 }
@@ -65,7 +91,9 @@ export async function fetchPortalConfiguration(scope) {
     throw error
   }
   const updatedAt = (data || []).map((row) => row.updated_at).filter(Boolean).sort().at(-1) || null
-  return { values: mergeGroup(defaults, data), updatedAt, setupRequired: false }
+  const values = mergeGroup(defaults, data)
+  if (scope === 'system') values.store = normalizeStoreConfiguration(values.store)
+  return { values, updatedAt, setupRequired: false }
 }
 
 export async function savePortalConfiguration(scope, key, value, isPublic = true) {
@@ -116,8 +144,18 @@ export async function savePaymentConfiguration(settings, qrFiles = {}) {
 export async function fetchPublicStoreConfiguration() {
   requireSupabase()
   const { data, error } = await supabase.rpc('hm_pos_get_public_store_info')
-  if (error) throw error
-  return { ...SYSTEM_DEFAULTS.store, ...(data || {}) }
+  if (!error && data && Object.keys(data).length) return normalizeStoreConfiguration(data)
+
+  // Cashier is authenticated, so fall back to the staff-readable settings row
+  // when an older project has not installed the public store-info RPC yet.
+  const { data: row, error: fallbackError } = await supabase
+    .from('portal_configuration')
+    .select('value')
+    .eq('scope', 'system')
+    .eq('key', 'store')
+    .maybeSingle()
+  if (fallbackError) throw error || fallbackError
+  return normalizeStoreConfiguration(row?.value || {})
 }
 
 export async function saveStoreConfiguration(settings, logoFile = null) {
