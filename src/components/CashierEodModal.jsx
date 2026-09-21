@@ -3,7 +3,7 @@ import { Calendar, Printer, RefreshCw, X } from 'lucide-react'
 import { fetchEodSummary, EOD_ITEM_NAMES } from '../services/eodService'
 import { getAccountDisplayName } from '../lib/accountIdentity'
 import { StoreReceiptBrand } from './StoreReceiptBrand'
-import { formatBusinessDate, formatOperatingTime, getBusinessDateKey, normalizeOperatingHours } from '../utils/operatingHours'
+import { formatBusinessDate, formatOperatingTime, getCalendarDateKey, normalizeOperatingHours } from '../utils/operatingHours'
 
 const formatAmount = (value) => Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const formatCount = (value) => String(Math.max(0, Math.round(Number(value || 0)))).padStart(2, '0')
@@ -40,17 +40,19 @@ export default function CashierEodModal({
   const storeOpenTime = storeInfo?.openTime
   const storeCloseTime = storeInfo?.closeTime
   const configuredHours = useMemo(() => normalizeOperatingHours({ openTime: storeOpenTime, closeTime: storeCloseTime }), [storeOpenTime, storeCloseTime])
-  const [selectedDate, setSelectedDate] = useState(() => initialDateKey || getBusinessDateKey(new Date(), configuredHours))
+  const [selectedDate, setSelectedDate] = useState(() => initialDateKey || getCalendarDateKey(new Date()))
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [cashError, setCashError] = useState('')
   const [filterCashierOnly, setFilterCashierOnly] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
   const [terminalNumber, setTerminalNumber] = useState(() => storeInfo?.terminalNumber || readStorage('hm-pos:terminal-number', '01'))
   const [startingCash, setStartingCash] = useState('0.00')
   const [actualCash, setActualCash] = useState('')
 
   const cashierName = getAccountDisplayName(cashierProfile, 'Cashier')
+  const latestReportDate = getCalendarDateKey(new Date())
   const cashKey = 'hm-pos:eod-cash:' + (cashierProfile?.id || 'all') + ':' + selectedDate
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function CashierEodModal({
     return () => {
       active = false
     }
-  }, [open, selectedDate, filterCashierOnly, cashierProfile?.id, cashierName, configuredHours.openTime, configuredHours.closeTime])
+  }, [open, selectedDate, filterCashierOnly, cashierProfile?.id, cashierName, configuredHours.openTime, configuredHours.closeTime, refreshKey])
 
   const expectedCash = useMemo(
     () => Number(startingCash || 0) + Number(summary?.cashCollected || 0),
@@ -152,7 +154,14 @@ export default function CashierEodModal({
           <label className="cashier-eod-date-picker">
             <Calendar size={16} aria-hidden="true" />
             <span className="sr-only">Business date</span>
-            <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} className="cashier-eod-input" />
+            <input
+              type="date"
+              value={selectedDate}
+              max={latestReportDate}
+              onChange={(event) => setSelectedDate(event.target.value > latestReportDate ? latestReportDate : event.target.value)}
+              className="cashier-eod-input"
+              title="Past dates are available for audit. Future dates cannot have an EOD report."
+            />
           </label>
           <div className="cashier-eod-cashier-filter" aria-label="Cashier filter">
             <button type="button" className={'cashier-eod-pill' + (filterCashierOnly ? ' active' : '')} onClick={() => setFilterCashierOnly(true)}>
@@ -162,7 +171,7 @@ export default function CashierEodModal({
               All Cashiers
             </button>
           </div>
-          <button type="button" className="cashier-eod-refresh-btn" onClick={() => setSelectedDate((date) => date)} disabled={loading} title="Refresh EOD data">
+          <button type="button" className="cashier-eod-refresh-btn" onClick={() => setRefreshKey((key) => key + 1)} disabled={loading} title="Refresh EOD data">
             <RefreshCw size={15} className={loading ? 'spinning' : ''} aria-hidden="true" />
             <span>Refresh</span>
           </button>

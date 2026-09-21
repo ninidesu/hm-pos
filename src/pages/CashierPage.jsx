@@ -26,7 +26,7 @@ import { getCurrentPortalSession, signOutPortal } from '../lib/auth'
 import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizeDecimal, sanitizeDigits, sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
-import { getBusinessDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
+import { getBusinessDateKey, getCalendarDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
 import { DEFAULT_PRICING, buildVatExemptOrderBreakdown } from '../utils/pricing'
 import useStoreInfo from '../hooks/useStoreInfo'
 import { StoreReceiptBrand, StoreReceiptFooter } from '../components/StoreReceiptBrand'
@@ -1038,7 +1038,7 @@ export default function CashierPage() {
         open={showEodModal}
         onClose={() => setShowEodModal(false)}
         cashierProfile={cashierProfile}
-        initialDateKey={businessDateKey}
+        initialDateKey={getCalendarDateKey(clock)}
         storeInfo={storeInfo}
       />
     </div>
@@ -1483,7 +1483,16 @@ function CashierReceipt({ order, onClose }) {
         </div>
       </div>
       <footer className="cashier-receipt-actions">
-        <button type="button" onClick={() => window.print()}>Print</button>
+        <button type="button" onClick={() => {
+          document.body.classList.add('printing-cashier-receipt')
+          const cleanup = () => document.body.classList.remove('printing-cashier-receipt')
+          window.addEventListener('afterprint', cleanup, { once: true })
+          try {
+            window.print()
+          } finally {
+            cleanup()
+          }
+        }}>Print</button>
         <button type="button" onClick={onClose}>Close</button>
       </footer>
     </section>
