@@ -20,6 +20,68 @@
   --hm-danger: #b43d52;
 }
 
+/* Isolate the transaction receipt without interfering with the EOD slip. */
+@media print {
+  body.printing-cashier-receipt > #root > .cashier-v2 > * {
+    display: none !important;
+  }
+
+  body.printing-cashier-receipt,
+  body.printing-cashier-receipt > #root,
+  body.printing-cashier-receipt > #root > .cashier-v2,
+  body.printing-cashier-receipt > #root > .cashier-v2 > .cashier-receipt-backdrop,
+  body.printing-cashier-receipt .cashier-receipt-modal,
+  body.printing-cashier-receipt .receipt-preview-shell {
+    display: block !important;
+    position: static !important;
+    width: 80mm !important;
+    min-width: 80mm !important;
+    max-width: 80mm !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  body.printing-cashier-receipt > #root > .cashier-v2 > .cashier-receipt-backdrop {
+    visibility: visible !important;
+  }
+
+  body.printing-cashier-receipt .cashier-receipt-modal-head,
+  body.printing-cashier-receipt .cashier-receipt-actions {
+    display: none !important;
+  }
+
+  body.printing-cashier-receipt .receipt-print-area,
+  body.printing-cashier-receipt .receipt-print-area * {
+    visibility: visible !important;
+  }
+
+  body.printing-cashier-receipt .receipt-print-area {
+    display: block !important;
+    position: static !important;
+    width: 80mm !important;
+    min-width: 80mm !important;
+    max-width: 80mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    overflow: visible !important;
+    break-after: avoid-page;
+  }
+
+  body.printing-cashier-receipt .receipt-print-area :is(.receipt-item, .receipt-row, .receipt-total-row) {
+    break-inside: avoid;
+  }
+}
+
 /* Management workspace */
 .app-layout.legacy-admin,
 .app-layout.legacy-staff {

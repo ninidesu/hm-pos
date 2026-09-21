@@ -102,6 +102,18 @@ export function getBusinessDateKey(date = new Date(), configuredHours = {}) {
 }
 
 /**
+ * Returns the local calendar date (YYYY-MM-DD) without shifting closed hours.
+ * EOD reports use this so their date matches the date shown in Transaction History.
+ */
+export function getCalendarDateKey(date = new Date()) {
+  const current = date instanceof Date ? new Date(date) : new Date(date)
+  const year = current.getFullYear()
+  const month = String(current.getMonth() + 1).padStart(2, '0')
+  const day = String(current.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
  * Formats a business date for display (e.g., "Thursday, September 17, 2026").
  */
 export function formatBusinessDate(dateInput) {
