@@ -27,7 +27,7 @@ import { getAccountDisplayName } from '../lib/accountIdentity'
 import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import { sanitizeDecimal, sanitizeDigits, sanitizePersonName, sanitizePhone } from '../utils/inputValidation'
 import { getBusinessDateKey, getOperatingHoursStatus } from '../utils/operatingHours'
-import { DEFAULT_PRICING, buildVatExemptOrderBreakdown } from '../utils/pricing'
+import { DEFAULT_PRICING, buildVatExemptOrderBreakdown, vatOrderSummaryRows } from '../utils/pricing'
 import useStoreInfo from '../hooks/useStoreInfo'
 import { StoreReceiptBrand, StoreReceiptFooter } from '../components/StoreReceiptBrand'
 import { getCashierOpening, getCashierOpeningStorageKey, saveCashierOpening, saveEodStartingCash } from '../services/cashierOpeningService'
@@ -1244,19 +1244,7 @@ function PaymentPanel({ payment, setPayment, total, change }) {
 }
 
 function CashierBreakdownRows({ breakdown }) {
-  const subtotalLabel = breakdown?.pricesIncludeVat ? 'Subtotal before VAT' : 'Subtotal'
-  const vatRows = breakdown?.pricesIncludeVat && Number(breakdown?.vatAmount || 0) > 0
-    ? <p><span>VAT included ({Math.round(Number(breakdown.vatRate || 0) * 100)}%)</span><b>{peso(breakdown.vatAmount)}</b></p>
-    : null
-  if (breakdown?.isVatExemptDiscount) {
-    return <>
-      <p><span>{subtotalLabel}</span><b>{peso(breakdown.baseAmount)}</b></p>
-      {vatRows}
-      <p><span>Discount</span><b>-{peso(breakdown.discountAmount)}</b></p>
-    </>
-  }
-
-  return <><p><span>{subtotalLabel}</span><b>{peso(breakdown?.baseAmount || 0)}</b></p>{vatRows}</>
+  return <>{vatOrderSummaryRows(breakdown).map((row) => <p key={row.key}><span>{row.label}</span><b>{row.amount < 0 ? `-${peso(Math.abs(row.amount))}` : peso(row.amount)}</b></p>)}</>
 }
 
 function OrderSummary({ subtotal, total, breakdown }) {
@@ -1468,9 +1456,8 @@ function CashierReceipt({ order, onClose }) {
             })}
           </div>
           <div className="receipt-line" />
-          <div className="receipt-total-row"><span>Subtotal:</span><span>{breakdown.baseAmount.toFixed(2)}</span></div>
-          {breakdown.isVatExemptDiscount ? <div className="receipt-total-row"><span>Discount:</span><span>-{breakdown.discountAmount.toFixed(2)}</span></div> : null}
-          <div className="receipt-total-row"><span>TOTAL:</span><span className="receipt-grand-total">{Number(order.total || 0).toFixed(2)}</span></div>
+          {vatOrderSummaryRows(breakdown).map((row) => <div className="receipt-total-row" key={row.key}><span>{row.label}:</span><span>{row.amount < 0 ? `-${Math.abs(row.amount).toFixed(2)}` : row.amount.toFixed(2)}</span></div>)}
+          <div className="receipt-total-row"><span>Total:</span><span className="receipt-grand-total">{Number(order.total || 0).toFixed(2)}</span></div>
           <div className="receipt-line" />
           <div className="receipt-row"><span className="receipt-label">Payment Method:</span><span className="receipt-value">{order.paymentMethod}</span></div>
           {breakdown.isVatExemptDiscount ? <div className="receipt-row"><span className="receipt-label">Discount ID:</span><span className="receipt-value">{order.discountIdNumber || 'N/A'}</span></div> : null}

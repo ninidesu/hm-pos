@@ -133,13 +133,12 @@ export function buildVatExemptOrderBreakdown({
   const exemptVatAmount = storedVatExemptAmount > 0
     ? roundMoney(Math.min(storedVatExemptAmount, eligibleGrossAmount))
     : computedEligible.vatAmount
-  const storedTotalBenefit = Number(discountAmount || 0)
-  const totalBenefitAmount = storedTotalBenefit > 0
-    ? roundMoney(storedTotalBenefit)
-    : computedEligible.benefitAmount
-  const actualDiscountAmount = roundMoney(Math.max(0, totalBenefitAmount - exemptVatAmount))
   const vatExemptSale = roundMoney(eligibleGrossAmount - exemptVatAmount)
-  const totalAmount = roundMoney(regularGrossAmount + regularBreakdown.vatAmount + vatExemptSale - actualDiscountAmount)
+  const storedDiscountAmount = Number(discountAmount || 0)
+  const actualDiscountAmount = storedDiscountAmount > 0
+    ? roundMoney(Math.min(storedDiscountAmount, vatExemptSale))
+    : roundMoney(vatExemptSale * 0.2)
+  const totalAmount = roundMoney(regularBreakdown.baseAmount + regularBreakdown.vatAmount + vatExemptSale - actualDiscountAmount)
 
   return {
     isVatExemptDiscount: true,
@@ -157,4 +156,22 @@ export function buildVatExemptOrderBreakdown({
     vatRate: regularBreakdown.vatRate,
     pricesIncludeVat: regularBreakdown.pricesIncludeVat,
   }
+}
+
+export function vatOrderSummaryRows(breakdown = {}) {
+  const vatLabel = `${Math.round(Number(breakdown.vatRate || DEFAULT_PRICING.vatRate) * 100)}% VAT`
+
+  if (breakdown.isVatExemptDiscount) {
+    return [
+      { key: 'vatable-sale', label: 'VATable Sale', amount: roundMoney(breakdown.regularBaseAmount) },
+      { key: 'vat-exempt-sale', label: 'VAT-Exempt Sale', amount: roundMoney(breakdown.vatExemptSale) },
+      { key: 'vat', label: vatLabel, amount: roundMoney(breakdown.regularVatAmount) },
+      { key: 'discount', label: 'SC/PWD discount', amount: -roundMoney(breakdown.discountAmount) },
+    ]
+  }
+
+  return [
+    { key: 'vatable-sale', label: 'VATable Sale', amount: roundMoney(breakdown.baseAmount) },
+    { key: 'vat', label: vatLabel, amount: roundMoney(breakdown.vatAmount) },
+  ]
 }
