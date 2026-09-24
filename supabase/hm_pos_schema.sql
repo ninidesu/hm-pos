@@ -785,6 +785,26 @@ begin
 end;
 $$;
 
+create or replace function public.staff_restore_menu_item(p_id uuid)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_item public.menu_items%rowtype; v_out_of_stock boolean;
+begin
+  perform public.hm_pos_assert_admin();
+  select * into v_item from public.menu_items where id = p_id and is_archived for update;
+  if not found then raise exception 'Archived menu item not found'; end if;
+  if not exists (select 1 from public.main_categories where id = v_item.main_category_id and not is_archived) then raise exception 'Restore the item category first'; end if;
+  if v_item.subcategory_id is not null and not exists (select 1 from public.subcategories where id = v_item.subcategory_id and not is_archived) then raise exception 'Restore the item subcategory first'; end if;
+  select exists (select 1 from public.stock where menu_item_id = p_id and not is_archived and quantity <= 0) into v_out_of_stock;
+  update public.menu_items set
+    is_archived = false,
+    manual_available = true,
+    is_available = not v_out_of_stock,
+    unavailable_reason = case when v_out_of_stock then 'out_of_stock' else null end,
+    updated_at = now()
+  where id = p_id;
+end;
+$$;
+
 create or replace function public.staff_duplicate_menu_item(p_id uuid)
 returns uuid language plpgsql security definer set search_path = public as $$
 declare v_source public.menu_items%rowtype; v_id uuid; v_suffix text := substr(replace(gen_random_uuid()::text, '-', ''), 1, 6);
@@ -1324,6 +1344,7 @@ grant execute on function public.staff_archive_subcategory(uuid) to authenticate
 grant execute on function public.staff_upsert_menu_item(uuid, uuid, uuid, text, text, text, numeric, text, text, boolean, boolean, boolean, text, boolean, boolean, boolean, integer, date, date, integer, jsonb) to authenticated;
 grant execute on function public.staff_set_menu_item_availability(uuid, boolean) to authenticated;
 grant execute on function public.staff_archive_menu_item(uuid) to authenticated;
+grant execute on function public.staff_restore_menu_item(uuid) to authenticated;
 grant execute on function public.staff_duplicate_menu_item(uuid) to authenticated;
 grant execute on function public.staff_upsert_stock(uuid, uuid, numeric, numeric, numeric, text, text, text, text, numeric, date) to authenticated;
 grant execute on function public.staff_adjust_stock(uuid, numeric, text) to authenticated;

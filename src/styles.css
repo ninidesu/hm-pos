@@ -5734,6 +5734,7 @@
 .menu-badge-warning{display:inline-flex;align-items:center;gap:4px;font-size:.72rem;color:#b45309;font-weight:700}
 .menu-card-meta{margin:0;font-size:.72rem;color:#94a3b8}
 .menu-card-actions{display:flex;gap:8px;margin-top:auto;padding-top:6px}
+.menu-card-actions .menu-restore-action{width:100%;min-height:44px;justify-content:center}.menu-restore-modal .primary-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
 @media(max-width:860px){.menu-item-list{grid-template-columns:1fr}}
 .menu-availability-modal{width:min(460px,100%);padding:28px}
 .menu-availability-modal h2{margin-bottom:10px;font-size:1.75rem;line-height:1.15}

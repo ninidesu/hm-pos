@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   AlertTriangle, Archive, Bell, Box, Check, Copy, Eye, Folder,
-  Grid, ImagePlus, Info, List, MoreVertical, Pencil, Plus, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Tags, TrendingUp, X,
+  Grid, ImagePlus, Info, List, MoreVertical, Pencil, Plus, RefreshCcw, RefreshCw, Search, ShieldCheck, SlidersHorizontal, Star, Tags, TrendingUp, X,
 } from 'lucide-react'
 import AppShell from '../components/AppShell'
 import { money } from '../utils/money'
@@ -11,7 +11,7 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase'
 import {
   fetchMainCategories, fetchSubcategories, fetchManageMenuItems,
   upsertMainCategory, archiveMainCategory, upsertSubcategory, archiveSubcategory,
-  upsertMenuItem, setMenuItemAvailability, archiveMenuItem, duplicateMenuItem, uploadMenuItemImage, uploadMenuItemInfoImage,
+  upsertMenuItem, setMenuItemAvailability, archiveMenuItem, restoreMenuItem, duplicateMenuItem, uploadMenuItemImage, uploadMenuItemInfoImage,
 } from '../services/manageMenuService'
 import { shouldShowSystemNotification } from '../services/staffSettingsService'
 import { useManagementSessionState } from '../hooks/useManagementSessionState'
@@ -19,6 +19,7 @@ import { useManagementSessionState } from '../hooks/useManagementSessionState'
 const REASON_META = {
   manual: { label: 'Manually disabled', tone: 'neutral' },
   archived: { label: 'Archived', tone: 'neutral' },
+  out_of_stock: { label: 'Out of stock', tone: 'neutral' },
   scheduled: { label: 'Scheduled availability', tone: 'blue' },
 }
 const TEMP_LABEL = { none: 'No temperature', hot_only: 'Hot only', iced_only: 'Iced only', flexible: 'Flexible' }
@@ -62,6 +63,7 @@ export default function ManageMenuPage({ role = 'staff' }) {
   const [drawerItem, setDrawerItem] = useManagementSessionState(`${storagePrefix}:menu:drawer`, null)
   const [availabilityTarget, setAvailabilityTarget] = useManagementSessionState(`${storagePrefix}:menu:availability-confirmation`, null)
   const [archiveTarget, setArchiveTarget] = useManagementSessionState(`${storagePrefix}:menu:archive-confirmation`, null)
+  const [restoreTarget, setRestoreTarget] = useState(null)
   const [categoryManagerOpen, setCategoryManagerOpen] = useManagementSessionState(`${storagePrefix}:menu:category-manager`, false)
 
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 1000); return () => clearInterval(t) }, [])
@@ -202,6 +204,21 @@ export default function ManageMenuPage({ role = 'staff' }) {
       setAvailabilityTarget(null)
     } catch (cause) {
       pushToast('error', describeError(cause, 'Could not update the selected items.'))
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const runRestore = async (item) => {
+    setBusyId(item.id)
+    try {
+      await restoreMenuItem(item.id)
+      pushToast('success', `${item.name} was restored to the active menu.`)
+      setRestoreTarget(null)
+      setDrawerItem(null)
+      await load()
+    } catch (cause) {
+      pushToast('error', describeError(cause, 'Could not restore this item.'))
     } finally {
       setBusyId('')
     }
@@ -350,7 +367,7 @@ export default function ManageMenuPage({ role = 'staff' }) {
       {loading ? (
         <div className="inv-skeleton">{Array.from({ length: 6 }).map((_, i) => <div className="inv-skeleton-row" key={i} />)}</div>
       ) : sorted.length === 0 ? (
-        <div className="inv-empty"><Box size={28} /><h3>No menu items found</h3><p>Try adjusting your filters, or add a new item.</p></div>
+        <div className="inv-empty"><Box size={28} /><h3>{tab === 'archived' ? 'No archived items' : 'No menu items found'}</h3><p>{tab === 'archived' ? 'Items you archive will appear here and can be restored.' : 'Try adjusting your filters, or add a new item.'}</p></div>
       ) : (
         <div className={view === 'grid' ? 'menu-item-grid' : 'menu-item-list'}>
           {sorted.map((item) => (
@@ -363,6 +380,7 @@ export default function ManageMenuPage({ role = 'staff' }) {
               onToggleAvailability={() => setAvailabilityTarget(item)}
               onDuplicate={() => handleDuplicate(item)}
               onArchive={() => { setArchiveTarget(item); setMenuOpenId('') }}
+              onRestore={() => { setRestoreTarget(item); setMenuOpenId('') }}
             />
           ))}
         </div>
@@ -381,6 +399,7 @@ export default function ManageMenuPage({ role = 'staff' }) {
           onClose={() => setDrawerItem(null)}
           onEdit={() => { setFormTarget({ item: drawerItem }); setDrawerItem(null) }}
           onToggleAvailability={() => setAvailabilityTarget(drawerItem)}
+          onRestore={() => setRestoreTarget(drawerItem)}
         />
       )}
       {availabilityTarget && (
@@ -427,6 +446,19 @@ export default function ManageMenuPage({ role = 'staff' }) {
           </section>
         </div>
       )}
+      {restoreTarget && (
+        <div className="payment-modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && busyId !== restoreTarget.id) setRestoreTarget(null) }}>
+          <section className="payment-modal menu-restore-modal" role="alertdialog" aria-modal="true" aria-labelledby="menu-restore-title" aria-describedby="menu-restore-description">
+            <span className="payment-modal-kicker">Restore archived item</span>
+            <h2 id="menu-restore-title">Restore {restoreTarget.name}?</h2>
+            <p id="menu-restore-description">The item will return to the active menu. It will be available for ordering unless its stock is empty.</p>
+            <div className="payment-modal-actions">
+              <button className="secondary-button" type="button" autoFocus onClick={() => setRestoreTarget(null)} disabled={busyId === restoreTarget.id}>Cancel</button>
+              <button className="primary-button" type="button" disabled={busyId === restoreTarget.id} onClick={() => runRestore(restoreTarget)}><RefreshCcw size={16} />{busyId === restoreTarget.id ? 'Restoring…' : 'Restore item'}</button>
+            </div>
+          </section>
+        </div>
+      )}
       {categoryManagerOpen && (
         <CategoryManagerModal
           mainCategories={mainCategories} subcategories={subcategories}
@@ -442,20 +474,19 @@ export default function ManageMenuPage({ role = 'staff' }) {
   )
 }
 
-function MenuItemCard({ item, view, busy, selected, onToggleSelect, menuOpen, onToggleMenu, onView, onEdit, onToggleAvailability, onDuplicate, onArchive }) {
+function MenuItemCard({ item, view, busy, selected, onToggleSelect, menuOpen, onToggleMenu, onView, onEdit, onToggleAvailability, onDuplicate, onArchive, onRestore }) {
   const reason = item.unavailableReason ? REASON_META[item.unavailableReason] : null
   const customizable = item.allowIce || item.allowSugar || item.allowAddons || item.temperatureType === 'flexible'
   return (
     <article className={`menu-item-card ${view === 'list' ? 'list' : ''}`}>
-      <label className="menu-card-select"><input type="checkbox" checked={selected} onChange={onToggleSelect} aria-label={`Select ${item.name}`} /></label>
+      {!item.isArchived && <label className="menu-card-select"><input type="checkbox" checked={selected} onChange={onToggleSelect} aria-label={`Select ${item.name}`} /></label>}
       <div className="menu-card-media"><img src={item.image} alt={item.name} loading="lazy" />
         <div className="inv-overflow menu-card-kebab">
           <button type="button" className="ops-icon-button small" aria-label={`More actions for ${item.name}`} aria-expanded={menuOpen} onClick={onToggleMenu}><MoreVertical size={15} /></button>
           {menuOpen && (
             <div className="inv-overflow-menu" role="menu">
               <button type="button" role="menuitem" onClick={onView}><Eye size={14} /> View details</button>
-              <button type="button" role="menuitem" onClick={onDuplicate}><Copy size={14} /> Duplicate item</button>
-              <button type="button" role="menuitem" className="danger" onClick={onArchive}><Archive size={14} /> Archive item</button>
+              {item.isArchived ? <button type="button" role="menuitem" onClick={onRestore}><RefreshCcw size={14} /> Restore item</button> : <><button type="button" role="menuitem" onClick={onDuplicate}><Copy size={14} /> Duplicate item</button><button type="button" role="menuitem" className="danger" onClick={onArchive}><Archive size={14} /> Archive item</button></>}
             </div>
           )}
         </div>
@@ -470,21 +501,20 @@ function MenuItemCard({ item, view, busy, selected, onToggleSelect, menuOpen, on
         <p className="menu-card-desc">{item.description || 'No description yet.'}</p>
         <p className="menu-card-price">{money(item.price)}</p>
         <div className="menu-card-badges">
-          <span className={`inv-status tone-${item.available ? 'green' : 'red'}`}>{item.available ? 'Available' : 'Unavailable'}</span>
+          <span className={`inv-status tone-${item.isArchived ? 'neutral' : item.available ? 'green' : 'red'}`}>{item.isArchived ? 'Archived' : item.available ? 'Available' : 'Unavailable'}</span>
           {customizable && <span className="inv-status tone-blue">{item.temperatureType === 'iced_only' ? 'Iced only' : item.temperatureType === 'hot_only' ? 'Hot only' : 'Flexible'}</span>}
           {!item.available && reason && <span className="menu-badge-warning"><AlertTriangle size={13} /> {reason.label}</span>}
         </div>
         <p className="menu-card-meta">Updated {timeAgo(item.updatedAt)}</p>
         <div className="menu-card-actions">
-          <button type="button" className="ops-secondary-action" onClick={onEdit} disabled={busy}><Pencil size={14} /> Edit</button>
-          <button type="button" className={item.manualAvailable ? 'ops-destructive-action' : 'ops-secondary-action'} onClick={onToggleAvailability} disabled={busy}>{item.manualAvailable ? 'Mark Unavailable' : 'Mark Available'}</button>
+          {item.isArchived ? <button type="button" className="ops-main-action menu-restore-action" onClick={onRestore} disabled={busy}><RefreshCcw size={15} />{busy ? 'Restoring…' : 'Restore item'}</button> : <><button type="button" className="ops-secondary-action" onClick={onEdit} disabled={busy}><Pencil size={14} /> Edit</button><button type="button" className={item.manualAvailable ? 'ops-destructive-action' : 'ops-secondary-action'} onClick={onToggleAvailability} disabled={busy}>{item.manualAvailable ? 'Mark Unavailable' : 'Mark Available'}</button></>}
         </div>
       </div>
     </article>
   )
 }
 
-function ItemDrawer({ item, onClose, onEdit, onToggleAvailability }) {
+function ItemDrawer({ item, onClose, onEdit, onToggleAvailability, onRestore }) {
   const reason = item.unavailableReason ? REASON_META[item.unavailableReason] : null
   return (
     <div className="ops-drawer-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
@@ -492,7 +522,7 @@ function ItemDrawer({ item, onClose, onEdit, onToggleAvailability }) {
         <header><div><span className="settings-kicker">{item.mainCategory}</span><h2 id="menu-drawer-title">{item.name}</h2></div><button type="button" onClick={onClose} aria-label="Close item details"><X size={20} /></button></header>
         <div className="ops-drawer-body">
           <section><h3>Overview</h3>
-            <p><b>{money(item.price)}</b> <span className={`inv-status tone-${item.available ? 'green' : 'red'}`}>{item.available ? 'Available' : 'Unavailable'}</span></p>
+            <p><b>{money(item.price)}</b> <span className={`inv-status tone-${item.isArchived ? 'neutral' : item.available ? 'green' : 'red'}`}>{item.isArchived ? 'Archived' : item.available ? 'Available' : 'Unavailable'}</span></p>
             {!item.available && reason && <p className="menu-badge-warning"><AlertTriangle size={13} /> {reason.label}</p>}
             <p>{item.description || 'No description yet.'}</p>
           </section>
@@ -505,8 +535,7 @@ function ItemDrawer({ item, onClose, onEdit, onToggleAvailability }) {
           </section>
         </div>
         <footer className="ops-drawer-footer">
-          <button type="button" className="ops-main-action" onClick={onEdit}><Pencil size={16} /> Edit</button>
-          <button type="button" className="ops-secondary-action" onClick={onToggleAvailability}>{item.manualAvailable ? 'Mark Unavailable' : 'Mark Available'}</button>
+          {item.isArchived ? <button type="button" className="ops-main-action" onClick={onRestore}><RefreshCcw size={16} /> Restore item</button> : <><button type="button" className="ops-main-action" onClick={onEdit}><Pencil size={16} /> Edit</button><button type="button" className="ops-secondary-action" onClick={onToggleAvailability}>{item.manualAvailable ? 'Mark Unavailable' : 'Mark Available'}</button></>}
         </footer>
       </aside>
     </div>

@@ -156,6 +156,11 @@ export async function archiveMenuItem(id) {
   if (error) throw error
 }
 
+export async function restoreMenuItem(id) {
+  const { error } = await supabase.rpc('staff_restore_menu_item', { p_id: id })
+  if (error) throw error
+}
+
 export async function duplicateMenuItem(id) {
   const { data, error } = await supabase.rpc('staff_duplicate_menu_item', { p_id: id })
   if (error) throw error
