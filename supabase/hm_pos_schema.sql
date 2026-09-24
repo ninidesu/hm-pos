@@ -127,6 +127,37 @@ begin
 end;
 $$;
 
+-- Compatibility guards used by management RPCs from earlier HM POS releases.
+-- All authorization now resolves from the active portal account in public.users.
+create or replace function public.is_admin_profile()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$ select public.hm_pos_is_admin(); $$;
+
+create or replace function public.assert_inventory_writer()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$ begin perform public.hm_pos_assert_admin(); end; $$;
+
+create or replace function public.assert_menu_writer()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$ begin perform public.hm_pos_assert_admin(); end; $$;
+
+create or replace function public.assert_transaction_writer()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$ begin perform public.hm_pos_assert_admin(); end; $$;
+
 create or replace function public.hm_pos_handle_new_auth_user()
 returns trigger
 language plpgsql
@@ -1274,6 +1305,10 @@ create policy "HM staff read transactions" on public.transactions for select to 
 create policy "HM staff read transaction audit" on public.transaction_audit_log for select to authenticated using (public.hm_pos_is_staff());
 
 grant usage on schema public to authenticated;
+grant execute on function public.is_admin_profile() to authenticated;
+grant execute on function public.assert_inventory_writer() to authenticated;
+grant execute on function public.assert_menu_writer() to authenticated;
+grant execute on function public.assert_transaction_writer() to authenticated;
 grant select, update on public.users to authenticated;
 grant select on public.portal_configuration, public.portal_audit_events to authenticated;
 grant insert, update, delete on public.portal_configuration to authenticated;
